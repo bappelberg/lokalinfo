@@ -8,14 +8,12 @@ AUTO_HIDE_THRESHOLD = 5
 
 
 class Category(str, Enum):
-    ACCIDENT = "olycka"
-    CRIME = "brott"
-    TRAFFIC = "trafik"
-    OUTAGE = "driftstorning"
-    NATURE = "natur"
-    ENVIRONMENT = "miljo"
-    EVENT = "event"
-    OTHER = "ovrigt"
+    CRIME       = "brott"
+    TRAFFIC     = "trafik"
+    FIRE        = "brand"
+    EVENT       = "event"
+    DISTURBANCE = "storning"
+    OTHER       = "ovrigt"
 
 
 class Post(SQLModel, table=True):
@@ -24,7 +22,7 @@ class Post(SQLModel, table=True):
     category: str = Field(max_length=20)
     lat: float
     lng: float
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     report_count: int = Field(default=0)
     is_hidden: bool = Field(default=False)
     is_deleted: bool = Field(default=False)
