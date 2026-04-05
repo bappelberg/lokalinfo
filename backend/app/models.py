@@ -18,6 +18,7 @@ class Category(str, Enum):
 
 class Post(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    title: str = Field(default="", max_length=80)
     content: str = Field(max_length=280)
     category: str = Field(max_length=20)
     lat: float
@@ -29,6 +30,7 @@ class Post(SQLModel, table=True):
 
 
 class PostCreate(SQLModel):
+    title: str = Field(default="", max_length=80)
     content: str = Field(min_length=1, max_length=280)
     category: Category
     lat: float = Field(ge=-90, le=90)
@@ -37,6 +39,7 @@ class PostCreate(SQLModel):
 
 class PostOut(SQLModel):
     id: uuid.UUID
+    title: str
     content: str
     category: Category
     lat: float

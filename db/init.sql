@@ -1,2 +1,2 @@
 -- Tabeller skapas automatiskt av SQLAlchemy vid uppstart.
--- Lägg eventuella seed-data eller extensions här.
+-- Seed-data läggs in av FastAPI i main.py efter att tabellerna skapats.
