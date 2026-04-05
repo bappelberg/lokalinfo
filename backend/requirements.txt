@@ -1,0 +1,6 @@
+fastapi[standard]
+sqlmodel
+uvicorn[standard]
+asyncpg
+pydantic-settings
+alembic

@@ -1,0 +1,2 @@
+-- Tabeller skapas automatiskt av SQLAlchemy vid uppstart.
+-- Lägg eventuella seed-data eller extensions här.
