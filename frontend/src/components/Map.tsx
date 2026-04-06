@@ -25,12 +25,17 @@ const HISTORY_DAYS = 30;
 // ─── Kategorier ────────────────────────────────────────────────────────────────
 
 const CATEGORIES: Record<string, { label: string; color: string }> = {
-  brott:    { label: "Brott",    color: "#ef4444" },
-  trafik:   { label: "Trafik",   color: "#f97316" },
-  brand:    { label: "Brand",    color: "#dc2626" },
-  event:    { label: "Event",    color: "#22c55e" },
-  storning: { label: "Störning", color: "#a855f7" },
-  ovrigt:   { label: "Övrigt",   color: "#6b7280" },
+  brott:      { label: "Brott",      color: "#ef4444" },
+  trafik:     { label: "Trafik",     color: "#f97316" },
+  brand:      { label: "Brand",      color: "#dc2626" },
+  event:      { label: "Event",      color: "#22c55e" },
+  storning:   { label: "Störning",   color: "#a855f7" },
+  rekreation: { label: "Rekreation", color: "#14b8a6" },
+  natur:      { label: "Natur",      color: "#16a34a" },
+  hjalp:      { label: "Hjälp",      color: "#0ea5e9" },
+  kultur:     { label: "Kultur",     color: "#f59e0b" },
+  mat:        { label: "Mat",        color: "#ec4899" },
+  ovrigt:     { label: "Övrigt",     color: "#6b7280" },
 };
 
 function makeIcon(category: string, pulse = false) {
@@ -203,7 +208,7 @@ export default function Map() {
       fetchPosts(centerRef.current.lat, centerRef.current.lng, historyDate);
   }, [historyDate, fetchPosts]);
 
-  async function handleSearch(e: React.FormEvent) {
+  async function handleSearch(e: React.SubmitEvent) {
     e.preventDefault();
     if (!query.trim()) return;
     const res = await fetch(
@@ -223,7 +228,7 @@ export default function Map() {
     });
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.SubmitEvent) {
     e.preventDefault();
     if (!newPin || !content.trim()) return;
     setSubmitting(true);
@@ -820,6 +825,9 @@ export default function Map() {
                     >
                       ▼ {post.downvote_count}
                     </button>
+                    <span className="flex items-center gap-1 text-xs text-gray-400">
+                      &#128172; {post.comment_count}
+                    </span>
                   </div>
                   <button
                     onClick={() => {
@@ -829,7 +837,7 @@ export default function Map() {
                     }}
                     className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
                   >
-                    Visa tråd →
+                    Visa kommentarer →
                   </button>
                 </div>
               </div>

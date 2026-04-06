@@ -8,8 +8,9 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import rate_limit
-from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, PostVote, ReportOut, VoteOut
 from database import get_session
+from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, PostVote, ReportOut, VoteOut
+from utils import get_client_ip
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -65,7 +66,7 @@ async def create_post(
     request: Request,
     session: AsyncSession = Depends(get_session)
 ):
-    ip = request.client.host
+    ip = get_client_ip(request)
     allowed, msg = rate_limit.check_rate_limit(ip)
     if not allowed:
         raise HTTPException(status_code=429, detail=msg)
@@ -93,7 +94,7 @@ async def report_post(
     if not post or post.is_deleted:
         raise HTTPException(status_code=404, detail="Post not found.")
     
-    post.report_count += 1
+    post.report_count += 8
 
     if post.report_count >= AUTO_HIDE_THRESHOLD:
         post.is_hidden = True
@@ -108,7 +109,7 @@ async def upvote_post(post_id: UUID, request: Request, session: AsyncSession = D
     post = await session.get(Post, post_id)
     if not post or post.is_deleted:
         raise HTTPException(status_code=404, detail="Post not found.")
-    ip = request.client.host
+    ip = get_client_ip(request)
     existing = await session.get(PostVote, (post_id, ip))
     if existing is None:
         post.upvote_count += 1
@@ -134,7 +135,7 @@ async def downvote_post(post_id: UUID, request: Request, session: AsyncSession =
     post = await session.get(Post, post_id)
     if not post or post.is_deleted:
         raise HTTPException(status_code=404, detail="Post not found.")
-    ip = request.client.host
+    ip = get_client_ip(request)
     existing = await session.get(PostVote, (post_id, ip))
     if existing is None:
         post.downvote_count += 1

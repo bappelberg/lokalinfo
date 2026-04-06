@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from database import get_session
 from models import Comment, CommentCreate, CommentOut, CommentVote, Post, VoteOut
+from utils import get_client_ip
 
 router = APIRouter(prefix="/posts", tags=["comments"])
 
@@ -73,7 +74,7 @@ async def upvote_comment(
     comment = await session.get(Comment, comment_id)
     if not comment or comment.is_deleted or comment.post_id != post_id:
         raise HTTPException(status_code=404, detail="Comment not found.")
-    ip = request.client.host
+    ip = get_client_ip(request)
     existing = await session.get(CommentVote, (comment_id, ip))
     if existing is None:
         comment.upvote_count += 1
@@ -104,7 +105,7 @@ async def downvote_comment(
     comment = await session.get(Comment, comment_id)
     if not comment or comment.is_deleted or comment.post_id != post_id:
         raise HTTPException(status_code=404, detail="Comment not found.")
-    ip = request.client.host
+    ip = get_client_ip(request)
     existing = await session.get(CommentVote, (comment_id, ip))
     if existing is None:
         comment.downvote_count += 1

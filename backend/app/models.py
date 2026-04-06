@@ -13,6 +13,11 @@ class Category(str, Enum):
     FIRE        = "brand"
     EVENT       = "event"
     DISTURBANCE = "storning"
+    RECREATION  = "rekreation"
+    NATURE      = "natur"
+    HELP        = "hjalp"
+    CULTURE     = "kultur"
+    FOOD        = "mat"
     OTHER       = "ovrigt"
 
 
