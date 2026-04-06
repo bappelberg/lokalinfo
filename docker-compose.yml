@@ -22,6 +22,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile.prod
     container_name: lokalinfo-backend
+    ports:
+      - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       ADMIN_TOKEN: ${ADMIN_TOKEN}
@@ -29,21 +31,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - lokalinfo-network
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    container_name: lokalinfo-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on:
-      - backend
     networks:
       - lokalinfo-network
     restart: unless-stopped
