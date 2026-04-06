@@ -8,7 +8,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import rate_limit
-from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, ReportOut
+from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, ReportOut, VoteOut
 from database import get_session
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -39,9 +39,10 @@ async def get_posts(
     - Without date: show post within the latest 24 hors
     - With date(YYYY-MM-DD): show posts within that spefic date (00:00-23:59 UTC)
     """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if date is None:
-        cutoff_start = datetime.utcnow() - timedelta(hours=POST_VISIBILITY_HOURS)
-        cutoff_end = datetime.utcnow()
+        cutoff_start = now - timedelta(hours=POST_VISIBILITY_HOURS)
+        cutoff_end = now
     else:
         cutoff_start = datetime(date.year, date.month, date.day, 0, 0, 0)
         cutoff_end = datetime(date.year, date.month, date.day, 23, 59, 59)
@@ -102,5 +103,24 @@ async def report_post(
     return ReportOut(message="Thank you for your report.", auto_hidden=post.is_hidden)
 
 
+@router.post("/{post_id}/upvote", response_model=VoteOut)
+async def upvote_post(post_id: UUID, session: AsyncSession = Depends(get_session)):
+    post = await session.get(Post, post_id)
+    if not post or post.is_deleted:
+        raise HTTPException(status_code=404, detail="Post not found.")
+    post.upvote_count += 1
+    session.add(post)
+    await session.commit()
+    return VoteOut(upvote_count=post.upvote_count, downvote_count=post.downvote_count)
 
-    
+
+@router.post("/{post_id}/downvote", response_model=VoteOut)
+async def downvote_post(post_id: UUID, session: AsyncSession = Depends(get_session)):
+    post = await session.get(Post, post_id)
+    if not post or post.is_deleted:
+        raise HTTPException(status_code=404, detail="Post not found.")
+    post.downvote_count += 1
+    session.add(post)
+    await session.commit()
+    return VoteOut(upvote_count=post.upvote_count, downvote_count=post.downvote_count)
+

@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     async with AsyncSessionLocal() as session:
         existing = await session.exec(select(Post).limit(1))
         if not existing.first():
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             for title, content, category, lat, lng, age in SEED:
                 session.add(Post(title=title, content=content, category=category, lat=lat, lng=lng, created_at=now - age))
             await session.commit()

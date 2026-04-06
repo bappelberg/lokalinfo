@@ -23,7 +23,9 @@ class Post(SQLModel, table=True):
     category: str = Field(max_length=20)
     lat: float
     lng: float
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    upvote_count: int = Field(default=0)
+    downvote_count: int = Field(default=0)
     report_count: int = Field(default=0)
     is_hidden: bool = Field(default=False)
     is_deleted: bool = Field(default=False)
@@ -45,6 +47,8 @@ class PostOut(SQLModel):
     lat: float
     lng: float
     created_at: datetime
+    upvote_count: int
+    downvote_count: int
     report_count: int
     is_hidden: bool
 
@@ -55,6 +59,38 @@ class PostAdminOut(PostOut):
     is_deleted: bool
 
 
+class VoteOut(SQLModel):
+    upvote_count: int
+    downvote_count: int
+
+
 class ReportOut(SQLModel):
     message: str
     auto_hidden: bool
+
+# Comments
+
+class Comment(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    post_id: uuid.UUID = Field(foreign_key="post.id")
+    parent_id: uuid.UUID | None = Field(default=None, foreign_key="comment.id")
+    content: str = Field(max_length=500)
+    upvote_count: int = Field(default=0)
+    downvote_count: int = Field(default=0)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    is_deleted: bool = Field(default=False)
+
+class CommentCreate(SQLModel):
+    content: str = Field(min_length=1, max_length=500)
+    parent_id: uuid.UUID | None = None
+
+class CommentOut(SQLModel):
+    id: uuid.UUID
+    post_id: uuid.UUID
+    parent_id: uuid.UUID | None
+    content: str
+    upvote_count: int
+    downvote_count: int
+    created_at: datetime
+    
+    model_config = {"from_attributes": True}
