@@ -19,6 +19,7 @@ type Comment = {
     id: string;
     content: string;
     upvote_count: number;
+    downvote_count: number;
     created_at: string;
     parent_id: string | null;
 };
