@@ -62,6 +62,7 @@ class PostAdminOut(PostOut):
 class VoteOut(SQLModel):
     upvote_count: int
     downvote_count: int
+    direction: str | None  # "up", "down", eller None om rösten togs bort
 
 
 class ReportOut(SQLModel):
@@ -92,5 +93,17 @@ class CommentOut(SQLModel):
     upvote_count: int
     downvote_count: int
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
+
+
+class PostVote(SQLModel, table=True):
+    post_id: uuid.UUID = Field(foreign_key="post.id", primary_key=True)
+    ip: str = Field(primary_key=True, max_length=45)
+    direction: str = Field(max_length=4)  # "up" | "down"
+
+
+class CommentVote(SQLModel, table=True):
+    comment_id: uuid.UUID = Field(foreign_key="comment.id", primary_key=True)
+    ip: str = Field(primary_key=True, max_length=45)
+    direction: str = Field(max_length=4)  # "up" | "down"

@@ -8,7 +8,7 @@ from sqlmodel import SQLModel, select
 from config import settings
 from database import AsyncSessionLocal, engine
 from models import Post
-from routers import admin, posts
+from routers import admin, posts, comments
 
 SEED = [
     # (title, content, category, lat, lng, age)
@@ -56,3 +56,4 @@ app.add_middleware(
 
 app.include_router(posts.router)
 app.include_router(admin.router)
+app.include_router(comments.router)

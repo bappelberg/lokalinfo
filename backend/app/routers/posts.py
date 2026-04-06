@@ -8,7 +8,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import rate_limit
-from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, ReportOut, VoteOut
+from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, PostVote, ReportOut, VoteOut
 from database import get_session
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -104,23 +104,53 @@ async def report_post(
 
 
 @router.post("/{post_id}/upvote", response_model=VoteOut)
-async def upvote_post(post_id: UUID, session: AsyncSession = Depends(get_session)):
+async def upvote_post(post_id: UUID, request: Request, session: AsyncSession = Depends(get_session)):
     post = await session.get(Post, post_id)
     if not post or post.is_deleted:
         raise HTTPException(status_code=404, detail="Post not found.")
-    post.upvote_count += 1
+    ip = request.client.host
+    existing = await session.get(PostVote, (post_id, ip))
+    if existing is None:
+        post.upvote_count += 1
+        session.add(PostVote(post_id=post_id, ip=ip, direction="up"))
+        new_direction = "up"
+    elif existing.direction == "up":
+        post.upvote_count -= 1
+        await session.delete(existing)
+        new_direction = None
+    else:
+        post.downvote_count -= 1
+        post.upvote_count += 1
+        existing.direction = "up"
+        session.add(existing)
+        new_direction = "up"
     session.add(post)
     await session.commit()
-    return VoteOut(upvote_count=post.upvote_count, downvote_count=post.downvote_count)
+    return VoteOut(upvote_count=post.upvote_count, downvote_count=post.downvote_count, direction=new_direction)
 
 
 @router.post("/{post_id}/downvote", response_model=VoteOut)
-async def downvote_post(post_id: UUID, session: AsyncSession = Depends(get_session)):
+async def downvote_post(post_id: UUID, request: Request, session: AsyncSession = Depends(get_session)):
     post = await session.get(Post, post_id)
     if not post or post.is_deleted:
         raise HTTPException(status_code=404, detail="Post not found.")
-    post.downvote_count += 1
+    ip = request.client.host
+    existing = await session.get(PostVote, (post_id, ip))
+    if existing is None:
+        post.downvote_count += 1
+        session.add(PostVote(post_id=post_id, ip=ip, direction="down"))
+        new_direction = "down"
+    elif existing.direction == "down":
+        post.downvote_count -= 1
+        await session.delete(existing)
+        new_direction = None
+    else:
+        post.upvote_count -= 1
+        post.downvote_count += 1
+        existing.direction = "down"
+        session.add(existing)
+        new_direction = "down"
     session.add(post)
     await session.commit()
-    return VoteOut(upvote_count=post.upvote_count, downvote_count=post.downvote_count)
+    return VoteOut(upvote_count=post.upvote_count, downvote_count=post.downvote_count, direction=new_direction)
 
