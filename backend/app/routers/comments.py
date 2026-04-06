@@ -55,7 +55,9 @@ async def create_comment(
             raise HTTPException(status_code=404, detail="Parent comment not found.")
 
     comment = Comment(post_id=post_id, parent_id=data.parent_id, content=data.content)
+    post.comment_count += 1
     session.add(comment)
+    session.add(post)
     await session.commit()
     await session.refresh(comment)
     return comment

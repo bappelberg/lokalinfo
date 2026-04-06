@@ -26,6 +26,7 @@ class Post(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     upvote_count: int = Field(default=0)
     downvote_count: int = Field(default=0)
+    comment_count: int = Field(default=0)
     report_count: int = Field(default=0)
     is_hidden: bool = Field(default=False)
     is_deleted: bool = Field(default=False)
@@ -49,6 +50,7 @@ class PostOut(SQLModel):
     created_at: datetime
     upvote_count: int
     downvote_count: int
+    comment_count: int
     report_count: int
     is_hidden: bool
 
