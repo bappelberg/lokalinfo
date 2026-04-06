@@ -183,7 +183,7 @@ export default function Map() {
 
   const fetchPosts = useCallback(async (lat: number, lng: number, date: Date | null) => {
     try {
-      let url = `${API_URL}/posts?lat=${lat}&lng=${lng}&radius=20`;
+      let url = `${API_URL}/posts/?lat=${lat}&lng=${lng}&radius=20`;
       if (date !== null) url += `&date=${toDateString(date)}`;
       const res = await fetch(url);
       if (res.ok) setPosts(await res.json());
