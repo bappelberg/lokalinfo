@@ -70,6 +70,7 @@ async def create_post(
         raise HTTPException(status_code=429, detail=msg)
     
     post = Post(
+        title=data.title,
         content=data.content,
         category=data.category,
         lat=data.lat,
