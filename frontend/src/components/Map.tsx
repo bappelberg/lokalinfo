@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   MapContainer,
   Marker,
@@ -115,8 +114,16 @@ function LocateUser({ onLocate }: { onLocate: (lat: number, lng: number) => void
   onLocateRef.current = onLocate;
 
   useEffect(() => {
+    const FALLBACK_LAT = 59.3293;
+    const FALLBACK_LNG = 18.0686;
     map.locate({ setView: true, maxZoom: 14 });
     map.once("locationfound", (e) => onLocateRef.current(e.latlng.lat, e.latlng.lng));
+    // Geolocation kräver HTTPS eller localhost — nekas på http + IP (t.ex. vid LAN-test).
+    // Utan fallback förblir centerRef null och fetchPosts anropas aldrig.
+    map.once("locationerror", () => {
+      map.setView([FALLBACK_LAT, FALLBACK_LNG], 13);
+      onLocateRef.current(FALLBACK_LAT, FALLBACK_LNG);
+    });
   }, [map]); // kör bara en gång — utan ref i deps körs map.locate() varje render och skriver över sökning
   return null;
 }
@@ -166,13 +173,6 @@ export default function Map() {
   // Historik — null = idag (live), annars ett datum
   const [historyDate, setHistoryDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const historyControlRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (historyControlRef.current) {
-      L.DomEvent.disableClickPropagation(historyControlRef.current);
-      L.DomEvent.disableScrollPropagation(historyControlRef.current);
-    }
-  }, []);
   const isLive = historyDate === null;
 
   // Skapa inlägg
@@ -619,8 +619,7 @@ export default function Map() {
       )}
 
       {/* ── Historikrad (toppen) ── */}
-      <div ref={historyControlRef} className="absolute top-4 left-0 right-0 z-[1000] flex justify-center items-start gap-2 pointer-events-none">
-        <div className="flex flex-col items-center gap-1 pointer-events-auto">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
         {!isLive && (
           <button
             onClick={() => {
@@ -633,11 +632,11 @@ export default function Map() {
             ← Gå till idag
           </button>
         )}
-        <div className="bg-white rounded-xl shadow-md">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
           {isLive ? (
             <button
-              onPointerDown={(e) => { e.stopPropagation(); setShowDatePicker((s) => !s); }}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-xl"
+              onClick={() => setShowDatePicker((s) => !s)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse inline-block" />
               Live — idag
@@ -645,44 +644,38 @@ export default function Map() {
             </button>
           ) : (
             <button
-              onPointerDown={(e) => { e.stopPropagation(); setShowDatePicker((s) => !s); }}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl"
+              onClick={() => setShowDatePicker((s) => !s)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100"
             >
               <span className="text-amber-500">⏪</span>
               {formatSwedish(historyDate!)}
               <span className="text-amber-400 text-xs ml-1">ändra ▾</span>
             </button>
           )}
-        </div>
-        {showDatePicker && typeof document !== "undefined" && createPortal(
-          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: "none" }}>
-            <div style={{ position: "absolute", top: "64px", left: 0, right: 0, display: "flex", justifyContent: "center" }}>
-              <div style={{ pointerEvents: "auto", background: "white", borderRadius: "12px", padding: "10px 14px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
-                <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "4px" }}>Välj dag (max 30 dagar tillbaka)</p>
-                <input
-                  type="date"
-                  min={minDate}
-                  max={maxDate}
-                  defaultValue={historyDate ? toDateString(historyDate) : ""}
-                  onChange={(e) => {
-                    if (!e.target.value) return;
-                    const [y, m, d] = e.target.value.split("-").map(Number);
-                    const picked = new Date(y, m - 1, d);
-                    if (toDateString(picked) === toDateString(today)) {
-                      setHistoryDate(null);
-                    } else {
-                      setHistoryDate(picked);
-                    }
-                    setShowDatePicker(false);
-                    setAddMode(false);
-                  }}
-                  style={{ display: "block", width: "200px", borderRadius: "6px", border: "1px solid #e5e7eb", padding: "4px 8px", fontSize: "14px", outline: "none" }}
-                />
-              </div>
+          {showDatePicker && (
+            <div className="border-t border-gray-100 px-3 py-2">
+              <p className="text-xs text-gray-400 mb-1">Välj dag (max 30 dagar tillbaka)</p>
+              <input
+                type="date"
+                min={minDate}
+                max={maxDate}
+                defaultValue={historyDate ? toDateString(historyDate) : ""}
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  const [y, m, d] = e.target.value.split("-").map(Number);
+                  const picked = new Date(y, m - 1, d);
+                  if (toDateString(picked) === toDateString(today)) {
+                    setHistoryDate(null); // idag = live-läge
+                  } else {
+                    setHistoryDate(picked);
+                  }
+                  setShowDatePicker(false);
+                  setAddMode(false);
+                }}
+                className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
-          </div>,
-          document.body
-        )}
+          )}
         </div>
       </div>
 
@@ -697,7 +690,7 @@ export default function Map() {
                 : "bg-blue-600 text-white hover:bg-blue-700"
             }`}
           >
-            {addMode ? "Avbryt" : "+ Nytt inlägg"}
+            {addMode ? "Avbryt" : "+"}
           </button>
         </div>
       )}
@@ -711,7 +704,7 @@ export default function Map() {
 
       {/* ── Formulär: skapa inlägg ── */}
       {addMode && newPin && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] w-80 bg-white rounded-2xl shadow-2xl p-5">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] w-80 bg-white rounded-2xl- shadow-2xl p-5">
           <h2 className="font-semibold text-gray-800 mb-3">Nytt inlägg</h2>
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <input
