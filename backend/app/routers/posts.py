@@ -29,17 +29,9 @@ def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 @router.get("", response_model=list[PostOut])
 async def get_posts(
-    lat: float,
-    lng: float,
-    radius: float = 10.0,
     date: DateType | None = None,
     session: AsyncSession = Depends(get_session)
 ):
-    """
-    Get visable posts within radius (km)
-    - Without date: show post within the latest 24 hors
-    - With date(YYYY-MM-DD): show posts within that spefic date (00:00-23:59 UTC)
-    """
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     if date is None:
         cutoff_start = now - timedelta(hours=POST_VISIBILITY_HOURS)
@@ -47,17 +39,16 @@ async def get_posts(
     else:
         cutoff_start = datetime(date.year, date.month, date.day, 0, 0, 0)
         cutoff_end = datetime(date.year, date.month, date.day, 23, 59, 59)
-    
+
     stmt = select(Post).where(
         Post.is_deleted == False,
         Post.is_hidden == False,
         Post.created_at >= cutoff_start,
         Post.created_at <= cutoff_end
     )
-    
+
     result = await session.exec(stmt)
-    posts = result.all()
-    return [p for p in posts if haversine(lat, lng, p.lat, p.lng) <= radius]
+    return result.all()
 
 
 @router.post("", response_model=PostOut, status_code=201)
