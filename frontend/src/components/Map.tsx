@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   MapContainer,
   Marker,
@@ -653,29 +654,34 @@ export default function Map() {
             </button>
           )}
         </div>
-        {showDatePicker && (
-          <div className="bg-white rounded-xl shadow-md px-3 py-2 mt-1">
-            <p className="text-xs text-gray-400 mb-1">Välj dag (max 30 dagar tillbaka)</p>
-            <input
-              type="date"
-              min={minDate}
-              max={maxDate}
-              defaultValue={historyDate ? toDateString(historyDate) : ""}
-              onChange={(e) => {
-                if (!e.target.value) return;
-                const [y, m, d] = e.target.value.split("-").map(Number);
-                const picked = new Date(y, m - 1, d);
-                if (toDateString(picked) === toDateString(today)) {
-                  setHistoryDate(null);
-                } else {
-                  setHistoryDate(picked);
-                }
-                setShowDatePicker(false);
-                setAddMode(false);
-              }}
-              className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        {showDatePicker && typeof document !== "undefined" && createPortal(
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, pointerEvents: "none" }}>
+            <div style={{ position: "absolute", top: "64px", left: 0, right: 0, display: "flex", justifyContent: "center" }}>
+              <div style={{ pointerEvents: "auto", background: "white", borderRadius: "12px", padding: "10px 14px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+                <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "4px" }}>Välj dag (max 30 dagar tillbaka)</p>
+                <input
+                  type="date"
+                  min={minDate}
+                  max={maxDate}
+                  defaultValue={historyDate ? toDateString(historyDate) : ""}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const [y, m, d] = e.target.value.split("-").map(Number);
+                    const picked = new Date(y, m - 1, d);
+                    if (toDateString(picked) === toDateString(today)) {
+                      setHistoryDate(null);
+                    } else {
+                      setHistoryDate(picked);
+                    }
+                    setShowDatePicker(false);
+                    setAddMode(false);
+                  }}
+                  style={{ display: "block", width: "200px", borderRadius: "6px", border: "1px solid #e5e7eb", padding: "4px 8px", fontSize: "14px", outline: "none" }}
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
         )}
         </div>
       </div>
