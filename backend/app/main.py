@@ -326,61 +326,61 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
-    async with AsyncSessionLocal() as session:
-        existing = await session.exec(select(Post).limit(1))
-        if not existing.first():
-            now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if settings.debug:
+        async with AsyncSessionLocal() as session:
+            existing = await session.exec(select(Post).limit(1))
+            if not existing.first():
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
 
-            # Pre-compute comment counts from seed data
-            seeded_comment_counts = {
-                title: sum(1 + len(replies) for _, _, _, _, replies in thread)
-                for title, thread in COMMENT_SEEDS.items()
-            }
+                # Pre-compute comment counts from seed data
+                seeded_comment_counts = {
+                    title: sum(1 + len(replies) for _, _, _, _, replies in thread)
+                    for title, thread in COMMENT_SEEDS.items()
+                }
 
-            # Seed posts
-            for title, content, category, lat, lng, age, upvotes, downvotes in SEED:
-                session.add(Post(
-                    title=title,
-                    content=content,
-                    category=category,
-                    lat=lat,
-                    lng=lng,
-                    created_at=now - age,
-                    upvote_count=upvotes,
-                    downvote_count=downvotes,
-                    comment_count=seeded_comment_counts.get(title, 0),
-                ))
-            await session.commit()
-
-            # Seed comments
-            result = await session.exec(select(Post))
-            posts_by_title = {p.title: p for p in result.all()}
-
-            for post_title, thread in COMMENT_SEEDS.items():
-                post = posts_by_title.get(post_title)
-                if not post:
-                    continue
-                for content, upvotes, downvotes, age, replies in thread:
-                    parent_id = uuid_lib.uuid4()
-                    session.add(Comment(
-                        id=parent_id,
-                        post_id=post.id,
+                # Seed posts
+                for title, content, category, lat, lng, age, upvotes, downvotes in SEED:
+                    session.add(Post(
+                        title=title,
                         content=content,
+                        category=category,
+                        lat=lat,
+                        lng=lng,
+                        created_at=now - age,
                         upvote_count=upvotes,
                         downvote_count=downvotes,
-                        created_at=now - age,
+                        comment_count=seeded_comment_counts.get(title, 0),
                     ))
-                    for r_content, r_upvotes, r_downvotes, r_age in replies:
-                        session.add(Comment(
-                            post_id=post.id,
-                            parent_id=parent_id,
-                            content=r_content,
-                            upvote_count=r_upvotes,
-                            downvote_count=r_downvotes,
-                            created_at=now - r_age,
-                        ))
-            await session.commit()
+                await session.commit()
 
+                # Seed comments
+                result = await session.exec(select(Post))
+                posts_by_title = {p.title: p for p in result.all()}
+
+                for post_title, thread in COMMENT_SEEDS.items():
+                    post = posts_by_title.get(post_title)
+                    if not post:
+                        continue
+                    for content, upvotes, downvotes, age, replies in thread:
+                        parent_id = uuid_lib.uuid4()
+                        session.add(Comment(
+                            id=parent_id,
+                            post_id=post.id,
+                            content=content,
+                            upvote_count=upvotes,
+                            downvote_count=downvotes,
+                            created_at=now - age,
+                        ))
+                        for r_content, r_upvotes, r_downvotes, r_age in replies:
+                            session.add(Comment(
+                                post_id=post.id,
+                                parent_id=parent_id,
+                                content=r_content,
+                                upvote_count=r_upvotes,
+                                downvote_count=r_downvotes,
+                                created_at=now - r_age,
+                            ))
+                await session.commit()
     yield
 
 

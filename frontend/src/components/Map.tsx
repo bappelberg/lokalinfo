@@ -19,7 +19,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = "/api";
 const HISTORY_DAYS = 30;
 
 // ─── Kategorier ────────────────────────────────────────────────────────────────
@@ -297,15 +297,21 @@ export default function Map() {
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState(false);
 
   // Fetch comments
   const fetchComments = useCallback(async (postId: string, sort: "popular" | "newest") => {
+    setCommentError(false);
     try {
       const res = await fetch(`${API_URL}/posts/${postId}/comments/?sort=${sort}`);
       if (res.ok) {
         setComments(await res.json());
+      } else {
+        setCommentError(true);
       }
-    } catch {}
+    } catch {
+      setCommentError(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -423,7 +429,7 @@ export default function Map() {
             </span>
             <span className="text-xs text-gray-400">{formatTime(selectedPost.created_at)}</span>
             <button
-              onClick={() => { setSelectedPost(null); setComments([]); }}
+              onClick={() => { setSelectedPost(null); setComments([]); setCommentError(false); }}
               className="ml-2 text-gray-400 hover:text-gray-700 text-xl leading-none"
             >
               ×
@@ -488,7 +494,10 @@ export default function Map() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-            {buildTree(comments).length === 0 && (
+            {commentError && (
+              <p className="text-sm text-red-400 text-center py-6">Kunde inte ladda kommentarer. <button onClick={() => fetchComments(selectedPost!.id, commentSort)} className="underline">Försök igen</button></p>
+            )}
+            {!commentError && buildTree(comments).length === 0 && (
               <p className="text-sm text-gray-400 text-center py-6">Inga kommentarer ännu — var först!</p>
             )}
             {buildTree(comments).map((comment) => (

@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     database_url: str
     admin_token: str
     cors_origins: str = "http://localhost:3000"
+    debug: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
