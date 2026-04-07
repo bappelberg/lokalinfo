@@ -27,7 +27,7 @@ def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return 2 * RADIUS_EARTH * asin(sqrt(a))
 
 
-@router.get("/", response_model=list[PostOut])
+@router.get("", response_model=list[PostOut])
 async def get_posts(
     lat: float,
     lng: float,
@@ -60,7 +60,7 @@ async def get_posts(
     return [p for p in posts if haversine(lat, lng, p.lat, p.lng) <= radius]
 
 
-@router.post("/", response_model=PostOut, status_code=201)
+@router.post("", response_model=PostOut, status_code=201)
 async def create_post(
     data: PostCreate,
     request: Request,

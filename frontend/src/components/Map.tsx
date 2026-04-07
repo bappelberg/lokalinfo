@@ -193,7 +193,7 @@ export default function Map() {
 
   const fetchPosts = useCallback(async (lat: number, lng: number, date: Date | null) => {
     try {
-      let url = `${API_URL}/posts/?lat=${lat}&lng=${lng}&radius=20`;
+      let url = `${API_URL}/posts?lat=${lat}&lng=${lng}&radius=20`;
       if (date !== null) url += `&date=${toDateString(date)}`;
       const res = await fetch(url);
       if (res.ok) setPosts(await res.json());
@@ -252,7 +252,7 @@ export default function Map() {
     setSubmitting(true);
     setCreateError("");
     try {
-      const res = await fetch(`${API_URL}/posts/`, {
+      const res = await fetch(`${API_URL}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content, category, lat: newPin.lat, lng: newPin.lng }),
@@ -321,7 +321,7 @@ export default function Map() {
   const fetchComments = useCallback(async (postId: string, sort: "popular" | "newest") => {
     setCommentError(false);
     try {
-      const res = await fetch(`${API_URL}/posts/${postId}/comments/?sort=${sort}`);
+      const res = await fetch(`${API_URL}/posts/${postId}/comments?sort=${sort}`);
       if (res.ok) {
         setComments(await res.json());
       } else {
@@ -723,7 +723,7 @@ export default function Map() {
 
       {/* ── Formulär: skapa inlägg ── */}
       {addMode && newPin && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] w-80 bg-white rounded-2xl- shadow-2xl p-5">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] w-80 bg-white rounded-2xl shadow-2xl p-5">
           <h2 className="font-semibold text-gray-800 mb-3">Nytt inlägg</h2>
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <input
@@ -732,12 +732,12 @@ export default function Map() {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Titel (max 80 tecken)"
               maxLength={80}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-base outline-none focus:ring-2 focus:ring-blue-500"
             />
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-base outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               {Object.entries(CATEGORIES).map(([value, { label }]) => (
                 <option key={value} value={value}>{label}</option>
@@ -749,7 +749,7 @@ export default function Map() {
               placeholder="Beskriv vad som händer… (max 280 tecken)"
               maxLength={280}
               rows={4}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-base resize-none outline-none focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-xs text-gray-400 text-right">{content.length}/280</span>
             {createError && <p className="text-sm text-red-600">{createError}</p>}
