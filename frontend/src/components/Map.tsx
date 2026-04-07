@@ -165,6 +165,13 @@ export default function Map() {
   // Historik — null = idag (live), annars ett datum
   const [historyDate, setHistoryDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const historyControlRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (historyControlRef.current) {
+      L.DomEvent.disableClickPropagation(historyControlRef.current);
+      L.DomEvent.disableScrollPropagation(historyControlRef.current);
+    }
+  }, []);
   const isLive = historyDate === null;
 
   // Skapa inlägg
@@ -611,7 +618,7 @@ export default function Map() {
       )}
 
       {/* ── Historikrad (toppen) ── */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
+      <div ref={historyControlRef} className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
         {!isLive && (
           <button
             onClick={() => {
