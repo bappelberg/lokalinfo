@@ -631,11 +631,11 @@ export default function Map() {
             ← Gå till idag
           </button>
         )}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="bg-white rounded-xl shadow-md">
           {isLive ? (
             <button
-              onClick={() => setShowDatePicker((s) => !s)}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              onPointerDown={(e) => { e.stopPropagation(); setShowDatePicker((s) => !s); }}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-xl"
             >
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse inline-block" />
               Live — idag
@@ -643,39 +643,39 @@ export default function Map() {
             </button>
           ) : (
             <button
-              onClick={() => setShowDatePicker((s) => !s)}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100"
+              onPointerDown={(e) => { e.stopPropagation(); setShowDatePicker((s) => !s); }}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl"
             >
               <span className="text-amber-500">⏪</span>
               {formatSwedish(historyDate!)}
               <span className="text-amber-400 text-xs ml-1">ändra ▾</span>
             </button>
           )}
-          {showDatePicker && (
-            <div className="border-t border-gray-100 px-3 py-2">
-              <p className="text-xs text-gray-400 mb-1">Välj dag (max 30 dagar tillbaka)</p>
-              <input
-                type="date"
-                min={minDate}
-                max={maxDate}
-                defaultValue={historyDate ? toDateString(historyDate) : ""}
-                onChange={(e) => {
-                  if (!e.target.value) return;
-                  const [y, m, d] = e.target.value.split("-").map(Number);
-                  const picked = new Date(y, m - 1, d);
-                  if (toDateString(picked) === toDateString(today)) {
-                    setHistoryDate(null); // idag = live-läge
-                  } else {
-                    setHistoryDate(picked);
-                  }
-                  setShowDatePicker(false);
-                  setAddMode(false);
-                }}
-                className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
         </div>
+        {showDatePicker && (
+          <div className="bg-white rounded-xl shadow-md px-3 py-2 mt-1">
+            <p className="text-xs text-gray-400 mb-1">Välj dag (max 30 dagar tillbaka)</p>
+            <input
+              type="date"
+              min={minDate}
+              max={maxDate}
+              defaultValue={historyDate ? toDateString(historyDate) : ""}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const [y, m, d] = e.target.value.split("-").map(Number);
+                const picked = new Date(y, m - 1, d);
+                if (toDateString(picked) === toDateString(today)) {
+                  setHistoryDate(null);
+                } else {
+                  setHistoryDate(picked);
+                }
+                setShowDatePicker(false);
+                setAddMode(false);
+              }}
+              className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Lägg till inlägg-knapp (bara i live-läge) ── */}
