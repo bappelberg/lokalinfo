@@ -618,7 +618,8 @@ export default function Map() {
       )}
 
       {/* ── Historikrad (toppen) ── */}
-      <div ref={historyControlRef} className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
+      <div ref={historyControlRef} className="absolute top-4 left-0 right-0 z-[1000] flex justify-center items-start gap-2 pointer-events-none">
+        <div className="flex flex-col items-center gap-1 pointer-events-auto">
         {!isLive && (
           <button
             onClick={() => {
@@ -676,6 +677,7 @@ export default function Map() {
             />
           </div>
         )}
+        </div>
       </div>
 
       {/* ── Lägg till inlägg-knapp (bara i live-läge) ── */}
