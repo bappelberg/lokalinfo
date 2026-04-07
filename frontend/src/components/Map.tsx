@@ -189,6 +189,8 @@ export default function Map() {
 
   const centerRef = useRef<{ lat: number; lng: number } | null>(null);
 
+  const [dateInput, setDateInput] = useState("");
+
   const fetchPosts = useCallback(async (lat: number, lng: number, date: Date | null) => {
     try {
       let url = `${API_URL}/posts/?lat=${lat}&lng=${lng}&radius=20`;
@@ -215,6 +217,14 @@ export default function Map() {
     if (centerRef.current)
       fetchPosts(centerRef.current.lat, centerRef.current.lng, historyDate);
   }, [historyDate, fetchPosts]);
+
+  useEffect(() => {
+    if (historyDate) {
+      setDateInput(toDateString(historyDate));
+    } else {
+      setDateInput("");
+    }
+  }, [historyDate]);
 
   async function handleSearch(e: React.SubmitEvent) {
     e.preventDefault();
@@ -659,18 +669,27 @@ export default function Map() {
                 type="date"
                 min={minDate}
                 max={maxDate}
-                defaultValue={historyDate ? toDateString(historyDate) : ""}
+                value={dateInput}
                 onChange={(e) => {
-                  if (!e.target.value) return;
-                  const [y, m, d] = e.target.value.split("-").map(Number);
+                  const val = e.target.value;
+                  if (!val) return;
+
+                  setDateInput(val);
+
+                  const [y, m, d] = val.split("-").map(Number);
                   const picked = new Date(y, m - 1, d);
+
                   if (toDateString(picked) === toDateString(today)) {
-                    setHistoryDate(null); // idag = live-läge
+                    setHistoryDate(null);
                   } else {
                     setHistoryDate(picked);
                   }
-                  setShowDatePicker(false);
-                  setAddMode(false);
+
+                  // ⚠️ Delay för iOS så picker inte stängs direkt
+                  setTimeout(() => {
+                    setShowDatePicker(false);
+                    setAddMode(false);
+                  }, 100);
                 }}
                 className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
