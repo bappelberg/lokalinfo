@@ -234,7 +234,7 @@ export default function Map() {
     setSubmitting(true);
     setCreateError("");
     try {
-      const res = await fetch(`${API_URL}/posts/`, {
+      const res = await fetch(`${API_URL}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content, category, lat: newPin.lat, lng: newPin.lng }),
@@ -260,7 +260,7 @@ export default function Map() {
 
   async function handleReport(postId: string) {
     if (reported.has(postId)) return;
-    const res = await fetch(`${API_URL}/posts/${postId}/report/`, { method: "POST" });
+    const res = await fetch(`${API_URL}/posts/${postId}/report`, { method: "POST" });
     if (res.ok) {
       setReported((prev) => new Set(prev).add(postId));
       setPosts((prev) =>
@@ -323,7 +323,7 @@ export default function Map() {
   // handleVote for posts
 
   async function handleVote(postId: string, direction: "up" | "down") {
-    const res = await fetch(`${API_URL}/posts/${postId}/${direction}vote/`, { method: "POST" });
+    const res = await fetch(`${API_URL}/posts/${postId}/${direction}vote`, { method: "POST" });
     if (res.ok) {
       const data = await res.json();
       const newVotes = { ...votes };
@@ -375,7 +375,7 @@ export default function Map() {
     }
     setCommentSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/posts/${selectedPost.id}/comments/`, {
+      const res = await fetch(`${API_URL}/posts/${selectedPost.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, parent_id: parentId })

@@ -30,7 +30,7 @@ export async function POST(
 ) {
   const { path } = await params;
   const pathStr = path.filter(Boolean).join("/");
-  const url = `${BACKEND}/${pathStr}/`;
+  const url = `${BACKEND}/${pathStr}`;
   const body = await req.text();
   const res = await fetch(url, {
     method: "POST",
@@ -50,7 +50,7 @@ export async function DELETE(
 ) {
   const { path } = await params;
   const pathStr = path.filter(Boolean).join("/");
-  const url = `${BACKEND}/${pathStr}/`;
+  const url = `${BACKEND}/${pathStr}`;
   const res = await fetch(url, {
     method: "DELETE",
     headers: forwardHeaders(req),
