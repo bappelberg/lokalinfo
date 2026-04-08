@@ -35,6 +35,8 @@ class Post(SQLModel, table=True):
     report_count: int = Field(default=0)
     is_hidden: bool = Field(default=False)
     is_deleted: bool = Field(default=False)
+    source: str | None = Field(default=None, max_length=20)
+    external_id: str | None = Field(default=None, max_length=50, index=True)
 
 
 class PostCreate(SQLModel):

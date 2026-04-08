@@ -4,3 +4,4 @@ uvicorn[standard]
 asyncpg
 pydantic-settings
 alembic
+httpx

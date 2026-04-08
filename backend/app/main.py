@@ -1,3 +1,4 @@
+import asyncio
 import uuid as uuid_lib
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -9,6 +10,7 @@ from sqlmodel import SQLModel, select
 from config import settings
 from database import AsyncSessionLocal, engine
 from models import Comment, Post
+from police import police_sync_loop
 from routers import admin, comments, posts
 
 SEED = [
@@ -381,7 +383,15 @@ async def lifespan(app: FastAPI):
                                 created_at=now - r_age,
                             ))
                 await session.commit()
+
+    # Starta polissynk i bakgrunden
+    sync_task = asyncio.create_task(police_sync_loop())
     yield
+    sync_task.cancel()
+    try:
+        await sync_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(title="Lokalinfo API", lifespan=lifespan, redirect_slashes=False)
