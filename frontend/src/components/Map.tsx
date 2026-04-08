@@ -131,13 +131,17 @@ function LocateUser({ onLocate }: { onLocate: (lat: number, lng: number) => void
 function FlyTo({
   target,
   onArrived,
+  onDone,
 }: {
   target: { lat: number; lon: number; bbox?: BBox } | null;
   onArrived: (lat: number, lng: number) => void;
+  onDone?: () => void; // 👈 optional
 }) {
   const map = useMap();
+
   useEffect(() => {
     if (!target) return;
+
     if (target.bbox) {
       map.fitBounds([
         [target.bbox[0], target.bbox[2]],
@@ -146,8 +150,14 @@ function FlyTo({
     } else {
       map.setView([target.lat, target.lon], 16);
     }
+
     onArrived(target.lat, target.lon);
-  }, [target, map, onArrived]);
+
+    // 👇 kör bara om den finns
+    onDone?.();
+
+  }, [target, map, onArrived, onDone]);
+
   return null;
 }
 
@@ -811,6 +821,7 @@ export default function Map() {
             centerRef.current = { lat, lng };
             fetchPosts(lat, lng, historyDate);
           }}
+          onDone={() => setTarget(null)} // 👈 funkar nu
         />
         {addMode && isLive && (
           <MapClickHandler onClick={(lat, lng) => setNewPin({ lat, lng })} />
