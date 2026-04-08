@@ -38,9 +38,26 @@ const CATEGORIES: Record<string, { label: string; color: string }> = {
   ovrigt:     { label: "Övrigt",     color: "#6b7280" },
 };
 
-function makeIcon(category: string, pulse = false) {
+function makeIcon(category: string, upvotes = 0, downvotes = 0, pulse = false) {
   const color = CATEGORIES[category]?.color ?? "#6b7280";
-  const size = pulse ? 18 : 14;
+  
+  // Beräkna netto-poäng
+  const netScore = upvotes - downvotes;
+  
+  const baseSize = 14;
+  
+  // Om poängen är positiv: öka storleken (max +14px)
+  // Om poängen är negativ: minska storleken (min ner till 6px)
+  let sizeAdjustment = 0;
+  if (netScore > 0) {
+    sizeAdjustment = Math.min(Math.log1p(netScore) * 4, 14);
+  } else if (netScore < 0) {
+    // Math.abs gör talet positivt så log fungerar, sen drar vi av det från basen
+    sizeAdjustment = -Math.min(Math.log1p(Math.abs(netScore)) * 3, 8);
+  }
+
+  const size = pulse ? 18 : Math.max(6, Math.round(baseSize + sizeAdjustment));
+  
   return L.divIcon({
     html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>`,
     className: "",
@@ -204,11 +221,14 @@ export default function Map() {
   const fetchPosts = useCallback(async (lat: number, lng: number, date: Date | null) => {
     try {
       let url = `${API_URL}/posts`;
-      if (date !== null) url += `&date=${toDateString(date)}`;
+      if (date !== null) {
+        url += `?date=${toDateString(date)}`;
+      }
+      
       const res = await fetch(url);
       if (res.ok) setPosts(await res.json());
-    } catch {
-      // tyst fel
+    } catch (error) {
+      console.error("Fetch error:", error);
     }
   }, []);
 
@@ -791,10 +811,13 @@ export default function Map() {
             <div 
               key={post.id}
               onClick={() => {
-                setSelectedPost(post);
+                // 1. Flytta bara kartan till punkten
                 setTarget({ lat: post.lat, lon: post.lng });
+                
+                // VALFRITT: Om du vill att tooltipen ska öppnas automatiskt 
+                // kan man trigga ett klick-event på själva markören här, 
+                // men Leaflets flyTo räcker oftast för att visa användaren var den ska titta.
               }}
-              // Mindre bredd (w-56) och tajtare padding (p-2.5)
               className="flex-shrink-0 w-56 bg-white/90 backdrop-blur shadow-md rounded-xl p-2.5 border-l-4 cursor-pointer snap-center active:scale-95 transition-transform duration-200"
               style={{ borderLeftColor: CATEGORIES[post.category]?.color ?? "#6b7280" }}
             >
@@ -806,8 +829,6 @@ export default function Map() {
                   {formatTime(post.created_at)}
                 </span>
               </div>
-              
-              {/* Titeln är nu fokus, innehåll begränsat till en rad */}
               <h3 className="text-xs font-bold text-gray-900 truncate">
                 {post.title}
               </h3>
