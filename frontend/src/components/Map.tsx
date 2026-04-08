@@ -559,7 +559,7 @@ export default function Map() {
                         placeholder="Skriv ett svar…"
                         maxLength={500}
                         rows={2}
-                        className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-xs resize-none outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-base resize-none outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <button
                         onClick={() => handleAddComment(replyText, comment.id)}
@@ -613,7 +613,7 @@ export default function Map() {
                   placeholder="Skriv en kommentar… (max 500 tecken)"
                   maxLength={500}
                   rows={2}
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-base resize-none outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={() => handleAddComment(newComment, null)}
