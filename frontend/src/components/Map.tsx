@@ -132,33 +132,33 @@ function FlyTo({
   target,
   onArrived,
   onDone,
-}: {
-  target: { lat: number; lon: number; bbox?: BBox } | null;
-  onArrived: (lat: number, lng: number) => void;
-  onDone?: () => void; // 👈 optional
-}) {
-  const map = useMap();
+  }: {
+    target: { lat: number; lon: number; bbox?: BBox } | null;
+    onArrived: (lat: number, lng: number) => void;
+    onDone: () => void;
+  }) {
+    const map = useMap();
 
-  useEffect(() => {
-    if (!target) return;
+    useEffect(() => {
+      if (!target) return;
 
-    if (target.bbox) {
-      map.fitBounds([
-        [target.bbox[0], target.bbox[2]],
-        [target.bbox[1], target.bbox[3]],
-      ]);
-    } else {
-      map.setView([target.lat, target.lon], 16);
-    }
+      if (target.bbox) {
+        map.fitBounds([
+          [target.bbox[0], target.bbox[2]],
+          [target.bbox[1], target.bbox[3]],
+        ]);
+      } else {
+        map.setView([target.lat, target.lon], 16);
+      }
 
-    onArrived(target.lat, target.lon);
+      onArrived(target.lat, target.lon);
 
-    // 👇 kör bara om den finns
-    onDone?.();
+      // 🔥 Viktigt: reset så den inte triggas igen och låser
+      onDone();
 
-  }, [target, map, onArrived, onDone]);
+    }, [target, map, onArrived, onDone]);
 
-  return null;
+    return null;
 }
 
 function MapClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
@@ -782,7 +782,41 @@ export default function Map() {
           </form>
         </div>
       )}
-
+      {/* ── Senaste nytt: Slimmad Horisontell karusell ── */}
+      <div className="absolute bottom-24 left-0 right-0 z-[1000] flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar snap-x">
+        {posts
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 10)
+          .map((post) => (
+            <div 
+              key={post.id}
+              onClick={() => {
+                setSelectedPost(post);
+                setTarget({ lat: post.lat, lon: post.lng });
+              }}
+              // Mindre bredd (w-56) och tajtare padding (p-2.5)
+              className="flex-shrink-0 w-56 bg-white/90 backdrop-blur shadow-md rounded-xl p-2.5 border-l-4 cursor-pointer snap-center active:scale-95 transition-transform duration-200"
+              style={{ borderLeftColor: CATEGORIES[post.category]?.color ?? "#6b7280" }}
+            >
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[9px] font-bold uppercase opacity-60 tracking-tight">
+                  {CATEGORIES[post.category]?.label}
+                </span>
+                <span className="text-[9px] text-gray-400 font-medium">
+                  {formatTime(post.created_at)}
+                </span>
+              </div>
+              
+              {/* Titeln är nu fokus, innehåll begränsat till en rad */}
+              <h3 className="text-xs font-bold text-gray-900 truncate">
+                {post.title}
+              </h3>
+              <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                {post.content}
+              </p>
+            </div>
+          ))}
+      </div>
       {/* ── Sökfält (botten) ── */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] w-80 bg-white rounded-xl p-3 shadow-lg">
         <form onSubmit={handleSearch} className="flex gap-2">
@@ -895,3 +929,26 @@ export default function Map() {
     </div>
   );
 }
+
+<style jsx global>{`
+  /* Dölj scrollbar för Chrome, Safari och Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Dölj scrollbar för IE, Edge och Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  /* Gör att scrollen "snappar" mjukt */
+  .snap-x {
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+  }
+  
+  .snap-center {
+    scroll-snap-align: center;
+  }
+`}</style>
