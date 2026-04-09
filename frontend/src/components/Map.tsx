@@ -223,6 +223,17 @@ export default function Map() {
   const centerRef = useRef<{ lat: number; lng: number } | null>(null);
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
   const mapRef = useRef<L.Map | null>(null);
+  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+
+  const userIcon = L.divIcon({
+    html: `<div style="position:relative;width:16px;height:16px">
+      <div class="animate-ping" style="position:absolute;inset:0;border-radius:50%;background:rgba(59,130,246,0.45)"></div>
+      <div style="position:absolute;inset:2px;border-radius:50%;background:#3b82f6;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>
+    </div>`,
+    className: "",
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+  });
 
   const [dateInput, setDateInput] = useState("");
 
@@ -882,9 +893,13 @@ export default function Map() {
         <LocateUser
           onLocate={(lat, lng) => {
             centerRef.current = { lat, lng };
+            setUserPos([lat, lng]);
             fetchPosts(lat, lng, historyDate);
           }}
         />
+        {userPos && (
+          <Marker position={userPos} icon={userIcon} zIndexOffset={1000} />
+        )}
         <FlyTo
           target={target}
           onArrived={(lat, lng) => {
