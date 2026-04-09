@@ -67,7 +67,8 @@ async def create_post(
         content=data.content,
         category=data.category,
         lat=data.lat,
-        lng=data.lng
+        lng=data.lng,
+        image_url=data.image_url
     )
 
     session.add(post)

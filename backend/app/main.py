@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlmodel import SQLModel, select
 
 from config import settings
@@ -327,6 +328,8 @@ COMMENT_SEEDS: dict[str, list] = {
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        # Migrera befintliga tabeller med nya kolumner
+        await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)"))
 
     if settings.debug:
         async with AsyncSessionLocal() as session:

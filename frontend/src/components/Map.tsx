@@ -111,6 +111,7 @@ type Post = {
   comment_count: number;
   report_count: number;
   is_hidden: boolean;
+  image_url: string | null;
 };
 
 type Comment = {
@@ -216,6 +217,8 @@ export default function Map() {
   const [category, setCategory] = useState("ovrigt");
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Rapport
   const [reported, setReported] = useState<Set<string>>(new Set());
@@ -301,10 +304,23 @@ export default function Map() {
     setSubmitting(true);
     setCreateError("");
     try {
+      let image_url: string | null = null;
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json();
+          setCreateError(err.error ?? "Kunde inte ladda upp bilden.");
+          return;
+        }
+        const uploaded = await uploadRes.json();
+        image_url = uploaded.url;
+      }
       const res = await fetch(`${API_URL}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content, category, lat: newPin.lat, lng: newPin.lng }),
+        body: JSON.stringify({ title, content, category, lat: newPin.lat, lng: newPin.lng, image_url }),
       });
       if (res.status === 429) {
         const err = await res.json();
@@ -319,6 +335,8 @@ export default function Map() {
       setTitle("");
       setContent("");
       setCategory("ovrigt");
+      setImageFile(null);
+      setImagePreview(null);
       setAddMode(false);
     } finally {
       setSubmitting(false);
@@ -513,6 +531,13 @@ export default function Map() {
               <p className="font-semibold text-gray-900 mb-1">{selectedPost.title}</p>
             )}
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedPost.content}</p>
+            {selectedPost.image_url && (
+              <img
+                src={selectedPost.image_url}
+                alt="Inläggsbild"
+                className="mt-2 w-full rounded-lg object-contain max-h-48"
+              />
+            )}
             <div className="flex items-center gap-3 mt-3">
               <button
                 onClick={() => handleVote(selectedPost.id, "up")}
@@ -807,6 +832,37 @@ export default function Map() {
               className="rounded-lg border border-gray-200 px-3 py-2 text-base resize-none outline-none focus:ring-2 focus:ring-blue-500"
             />
             <span className="text-xs text-gray-400 text-right">{content.length}/280</span>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-gray-500">Bild (valfritt, max 5 MB)</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setImageFile(file);
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  } else {
+                    setImagePreview(null);
+                  }
+                }}
+                className="text-sm text-gray-600 file:mr-2 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-xs file:text-blue-700 file:cursor-pointer"
+              />
+              {imagePreview && (
+                <div className="relative">
+                  <img src={imagePreview} alt="Förhandsgranskning" className="w-full rounded-lg object-contain max-h-32" />
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </label>
             {createError && <p className="text-sm text-red-600">{createError}</p>}
             <div className="flex gap-2">
               <button
@@ -938,6 +994,13 @@ export default function Map() {
                 </div>
                 <p className="font-semibold text-gray-900 mb-1">{post.title}</p>
                 <p className="text-gray-700 my-2 whitespace-pre-wrap">{post.content}</p>
+                {post.image_url && (
+                  <img
+                    src={post.image_url}
+                    alt="Inläggsbild"
+                    className="w-full rounded-lg object-contain max-h-40 mb-2"
+                  />
+                )}
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-3">
                     <button

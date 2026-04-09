@@ -37,6 +37,7 @@ class Post(SQLModel, table=True):
     is_deleted: bool = Field(default=False)
     source: str | None = Field(default=None, max_length=20)
     external_id: str | None = Field(default=None, max_length=50, index=True)
+    image_url: str | None = Field(default=None, max_length=500)
 
 
 class PostCreate(SQLModel):
@@ -45,6 +46,7 @@ class PostCreate(SQLModel):
     category: Category
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
+    image_url: str | None = Field(default=None, max_length=500)
 
 
 class PostOut(SQLModel):
@@ -60,6 +62,7 @@ class PostOut(SQLModel):
     comment_count: int
     report_count: int
     is_hidden: bool
+    image_url: str | None
 
     model_config = {"from_attributes": True}
 
