@@ -226,6 +226,61 @@ export default function Map() {
   const centerRef = useRef<{ lat: number; lng: number } | null>(null);
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
   const mapRef = useRef<L.Map | null>(null);
+  const pendingPostId = useRef<string | null>(
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("post") : null
+  );
+  const [copied, setCopied] = useState<string | null>(null);
+
+  function sharePost(postId: string) {
+    const url = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+    const finish = () => { setCopied(postId); setTimeout(() => setCopied(null), 2000); };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(finish).catch(() => fallbackCopy(url, finish));
+    } else {
+      // navigator.clipboard requires HTTPS -> Fallback
+      fallbackCopy(url, finish);
+    }
+  }
+
+  function fallbackCopy(text: string, onDone: () => void) {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    try { document.execCommand("copy"); onDone(); } catch {}
+    document.body.removeChild(el);
+  }
+
+  // Thread panel
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentSort, setCommentSort] = useState<"popular" | "newest">("popular");
+  const [commentVotes, setCommentVotes] = useState<Record<string, "up" | "down">>(() => {
+    try { return JSON.parse(localStorage.getItem("lokalinfo_comment_votes") ?? "{}");}
+    catch { return {}; }
+  });
+  const [newComment, setNewComment] = useState("");
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState(false);
+
+  const fetchComments = useCallback(async (postId: string, sort: "popular" | "newest") => {
+    setCommentError(false);
+    try {
+      const res = await fetch(`${API_URL}/posts/${postId}/comments?sort=${sort}`);
+      if (res.ok) {
+        setComments(await res.json());
+      } else {
+        setCommentError(true);
+      }
+    } catch {
+      setCommentError(true);
+    }
+  }, []);
+
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
   const userIcon = L.divIcon({
@@ -246,9 +301,22 @@ export default function Map() {
       if (date !== null) {
         url += `?date=${toDateString(date)}`;
       }
-      
+
       const res = await fetch(url);
-      if (res.ok) setPosts(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data);
+        if (pendingPostId.current) {
+          const post = data.find((p: Post) => p.id === pendingPostId.current);
+          if (post) {
+            pendingPostId.current = null;
+            setTarget({ lat: post.lat, lon: post.lng });
+            setSelectedPost(post);
+            setCommentSort("popular");
+            fetchComments(post.id, "popular");
+          }
+        }
+      }
     } catch (error) {
       console.error("Fetch error:", error);
     }
@@ -370,40 +438,22 @@ export default function Map() {
     catch { return {}; }
   });
 
-  // Thread panel
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [commentSort, setCommentSort] = useState<"popular" | "newest">("popular");
-  const [commentVotes, setCommentVotes] = useState<Record<string, "up" | "down">>(() => {
-    try { return JSON.parse(localStorage.getItem("lokalinfo_comment_votes") ?? "{}");}
-    catch { return {}; }
-  })
-  const [newComment, setNewComment] = useState("");
-  const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [commentSubmitting, setCommentSubmitting] = useState(false);
-  const [commentError, setCommentError] = useState(false);
-
-  // Fetch comments
-  const fetchComments = useCallback(async (postId: string, sort: "popular" | "newest") => {
-    setCommentError(false);
-    try {
-      const res = await fetch(`${API_URL}/posts/${postId}/comments?sort=${sort}`);
-      if (res.ok) {
-        setComments(await res.json());
-      } else {
-        setCommentError(true);
-      }
-    } catch {
-      setCommentError(true);
-    }
-  }, []);
-
   useEffect(() => {
     if (selectedPost) {
       fetchComments(selectedPost.id, commentSort);
     }
   }, [commentSort, selectedPost, fetchComments]);
+
+  // Synka URL med vald post
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selectedPost) {
+      url.searchParams.set("post", selectedPost.id);
+    } else {
+      url.searchParams.delete("post");
+    }
+    window.history.replaceState(null, "", url.toString());
+  }, [selectedPost]);
 
   // handleVote for posts
 
@@ -557,11 +607,17 @@ export default function Map() {
               >
                 ▼ {selectedPost.downvote_count}
               </button>
+              <button
+                onClick={() => sharePost(selectedPost.id)}
+                className="ml-auto text-xs text-gray-400 hover:text-blue-500 transition-colors"
+              >
+                {copied === selectedPost.id ? "Kopierat!" : "Dela"}
+              </button>
               {isLive && (
                 <button
                   onClick={() => handleReport(selectedPost.id)}
                   disabled={reported.has(selectedPost.id)}
-                  className="ml-auto text-xs text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
+                  className="ml-2 text-xs text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
                 >
                   {reported.has(selectedPost.id) ? "Rapporterat" : "Rapportera"}
                 </button>
@@ -1029,16 +1085,24 @@ export default function Map() {
                       &#128172; {post.comment_count}
                     </span>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedPost(post);
-                      setCommentSort("popular");
-                      fetchComments(post.id, "popular");
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                  >
-                    Visa kommentarer →
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => sharePost(post.id)}
+                      className="text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                    >
+                      {copied === post.id ? "Kopierat!" : "Dela"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedPost(post);
+                        setCommentSort("popular");
+                        fetchComments(post.id, "popular");
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                    >
+                      Visa kommentarer →
+                    </button>
+                  </div>
                 </div>
               </div>
             </Popup>
