@@ -831,7 +831,6 @@ export default function Map() {
       <div className="absolute bottom-24 left-0 right-0 z-[1000] flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar snap-x">
         {posts
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 10)
           .map((post) => (
             <div
               key={post.id}
