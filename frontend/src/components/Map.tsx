@@ -183,6 +183,12 @@ function MapClickHandler({ onClick }: { onClick: (lat: number, lng: number) => v
   return null;
 }
 
+function GetMapInstance({ mapRef }: { mapRef: React.MutableRefObject<L.Map | null> }) {
+  const map = useMap();
+  useEffect(() => { mapRef.current = map; }, [map]);
+  return null;
+}
+
 // ─── Huvudkomponent ────────────────────────────────────────────────────────────
 
 export default function Map() {
@@ -215,6 +221,8 @@ export default function Map() {
   const [reported, setReported] = useState<Set<string>>(new Set());
 
   const centerRef = useRef<{ lat: number; lng: number } | null>(null);
+  const markerRefs = useRef<Record<string, L.Marker | null>>({});
+  const mapRef = useRef<L.Map | null>(null);
 
   const [dateInput, setDateInput] = useState("");
 
@@ -808,15 +816,21 @@ export default function Map() {
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 10)
           .map((post) => (
-            <div 
+            <div
               key={post.id}
               onClick={() => {
-                // 1. Flytta bara kartan till punkten
+                // Stäng sidopanel och eventuell öppen popup (fixar bug #2)
+                if (selectedPost) {
+                  setSelectedPost(null);
+                  setComments([]);
+                  setCommentError(false);
+                }
+                mapRef.current?.closePopup();
+                // Flyg till kortet och öppna dess popup (feature #1)
                 setTarget({ lat: post.lat, lon: post.lng });
-                
-                // VALFRITT: Om du vill att tooltipen ska öppnas automatiskt 
-                // kan man trigga ett klick-event på själva markören här, 
-                // men Leaflets flyTo räcker oftast för att visa användaren var den ska titta.
+                setTimeout(() => {
+                  markerRefs.current[post.id]?.openPopup();
+                }, 300);
               }}
               className="flex-shrink-0 w-56 bg-white/90 backdrop-blur shadow-md rounded-xl p-2.5 border-l-4 cursor-pointer snap-center active:scale-95 transition-transform duration-200"
               style={{ borderLeftColor: CATEGORIES[post.category]?.color ?? "#6b7280" }}
@@ -864,6 +878,7 @@ export default function Map() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <GetMapInstance mapRef={mapRef} />
         <LocateUser
           onLocate={(lat, lng) => {
             centerRef.current = { lat, lng };
@@ -889,7 +904,7 @@ export default function Map() {
 
         {/* Inlägg */}
         {posts.map((post) => (
-          <Marker key={post.id} position={[post.lat, post.lng]} icon={makeIcon(post.category, post.upvote_count)}>
+          <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={[post.lat, post.lng]} icon={makeIcon(post.category, post.upvote_count)}>
             <Popup>
               <div className="text-sm min-w-[180px]">
                 <div className="flex items-center gap-2 mb-1">
