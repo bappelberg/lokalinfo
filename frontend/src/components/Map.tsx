@@ -467,11 +467,17 @@ export default function Map() {
     }
   }
 
-  function makeIcon(category: string, upvotes = 0, pulse = false) {
+  function makeIcon(category: string, upvotes = 0, downvotes = 0, pulse = false) {
     const color = CATEGORIES[category]?.color ?? "#6b7280";
+    const netScore = upvotes - downvotes;
     const base = 14;
-    const extra = Math.min(Math.log1p(upvotes) * 4, 14)
-    const size = pulse ? 18 : Math.round(base + extra);
+    let adjustment = 0;
+    if (netScore > 0) {
+      adjustment = Math.min(Math.log1p(netScore) * 4, 14);
+    } else if (netScore < 0) {
+      adjustment = -Math.min(Math.log1p(Math.abs(netScore)) * 3, 8);
+    }
+    const size = pulse ? 18 : Math.max(6, Math.round(base + adjustment));
     return L.divIcon({
       html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>`,
       className: "",
@@ -914,12 +920,12 @@ export default function Map() {
 
         {/* Förhandsnål */}
         {addMode && newPin && (
-          <Marker position={[newPin.lat, newPin.lng]} icon={makeIcon(category, 0, true)} />
+          <Marker position={[newPin.lat, newPin.lng]} icon={makeIcon(category, 0, 0, true)} />
         )}
 
         {/* Inlägg */}
         {posts.map((post) => (
-          <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={[post.lat, post.lng]} icon={makeIcon(post.category, post.upvote_count)}>
+          <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={[post.lat, post.lng]} icon={makeIcon(post.category, post.upvote_count, post.downvote_count)}>
             <Popup>
               <div className="text-sm min-w-[180px]">
                 <div className="flex items-center gap-2 mb-1">
