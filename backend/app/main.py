@@ -11,6 +11,7 @@ from sqlmodel import SQLModel, select
 from config import settings
 from database import AsyncSessionLocal, engine
 from models import Comment, Post
+from gdelt_master import gdelt_sync_loop
 from police import police_sync_loop
 from routers import admin, comments, posts
 
@@ -387,14 +388,16 @@ async def lifespan(app: FastAPI):
                             ))
                 await session.commit()
 
-    # Starta polissynk i bakgrunden
-    sync_task = asyncio.create_task(police_sync_loop())
+    # Starta bakgrundssynkar
+    police_task = asyncio.create_task(police_sync_loop())
+    gdelt_task = asyncio.create_task(gdelt_sync_loop())
     yield
-    sync_task.cancel()
-    try:
-        await sync_task
-    except asyncio.CancelledError:
-        pass
+    for task in (police_task, gdelt_task):
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="Lokalinfo API", lifespan=lifespan, redirect_slashes=False)

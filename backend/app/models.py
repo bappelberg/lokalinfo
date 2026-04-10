@@ -24,7 +24,7 @@ class Category(str, Enum):
 class Post(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     title: str = Field(default="", max_length=80)
-    content: str = Field(max_length=280)
+    content: str = Field(max_length=600)
     category: str = Field(max_length=20)
     lat: float
     lng: float
