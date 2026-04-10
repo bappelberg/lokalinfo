@@ -237,7 +237,37 @@ export default function Map() {
 
   // Inlägg
   const [posts, setPosts] = useState<Post[]>([]);
-  const jitteredPositions = useMemo(() => computeJitteredPositions(posts), [posts]);
+
+  // Kategorifilter — alla aktiva från start
+  const [activeCategories, setActiveCategories] = useState<Set<string>>(
+    () => new Set(Object.keys(CATEGORIES))
+  );
+  function toggleCategory(key: string) {
+    setActiveCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+  function toggleAll() {
+    const allKeys = Object.keys(CATEGORIES);
+    setActiveCategories(
+      activeCategories.size === allKeys.length
+        ? new Set()
+        : new Set(allKeys)
+    );
+  }
+  const allActive = activeCategories.size === Object.keys(CATEGORIES).length;
+
+  const filteredPosts = useMemo(
+    () => posts.filter((p) => activeCategories.has(p.category)),
+    [posts, activeCategories]
+  );
+  const jitteredPositions = useMemo(() => computeJitteredPositions(filteredPosts), [filteredPosts]);
 
   // Historik — null = idag (live), annars ett datum
   const [historyDate, setHistoryDate] = useState<Date | null>(null);
@@ -974,9 +1004,45 @@ export default function Map() {
           </form>
         </div>
       )}
+      {/* ── Kategorifilter (vänster sida) ── */}
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-1">
+        <button
+          onClick={toggleAll}
+          className={`rounded-full px-2 py-1 text-[10px] font-semibold shadow transition-colors border ${
+            allActive
+              ? "bg-gray-800 text-white border-gray-800"
+              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          Alla
+        </button>
+        {Object.entries(CATEGORIES).map(([key, { label, color }]) => {
+          const active = activeCategories.has(key);
+          return (
+            <button
+              key={key}
+              onClick={() => toggleCategory(key)}
+              title={label}
+              className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2 py-1 text-[10px] font-medium shadow transition-all border ${
+                active
+                  ? "bg-white border-transparent text-gray-800"
+                  : "bg-white/60 border-gray-100 text-gray-300"
+              }`}
+              style={{ borderLeftColor: active ? color : undefined, borderLeftWidth: active ? 3 : undefined }}
+            >
+              <span
+                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: active ? color : "#d1d5db" }}
+              />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Senaste nytt: Slimmad Horisontell karusell ── */}
       <div className="absolute bottom-24 left-0 right-0 z-[1000] flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar snap-x">
-        {posts
+        {filteredPosts
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .map((post) => (
             <div
@@ -1070,7 +1136,7 @@ export default function Map() {
         )}
 
         {/* Inlägg */}
-        {posts.map((post) => {
+        {filteredPosts.map((post) => {
           const pos = jitteredPositions[post.id] ?? [post.lat, post.lng] as [number, number];
           return (
           <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={pos} icon={makeIcon(post.category, post.upvote_count, post.downvote_count)}>
