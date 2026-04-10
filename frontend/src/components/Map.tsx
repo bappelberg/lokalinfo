@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   Marker,
@@ -190,6 +190,40 @@ function GetMapInstance({ mapRef }: { mapRef: React.MutableRefObject<L.Map | nul
   return null;
 }
 
+// ─── Koordinat-jitter för överlappande posts ───────────────────────────────────
+// När flera posts delar exakt samma GPS-punkt sprids de ut i en liten cirkel
+// (~20 m radie) så att alla markers syns och går att klicka på.
+
+function computeJitteredPositions(posts: Post[]): Record<string, [number, number]> {
+  const result: Record<string, [number, number]> = {};
+  const groups: Record<string, Post[]> = {};
+
+  for (const post of posts) {
+    const key = `${post.lat.toFixed(6)},${post.lng.toFixed(6)}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(post);
+  }
+
+  for (const group of Object.values(groups)) {
+    if (group.length === 1) {
+      result[group[0].id] = [group[0].lat, group[0].lng];
+    } else {
+      // Sortera deterministiskt så ordningen inte ändras vid omladdning
+      const sorted = [...group].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const radius = 0.00018; // ≈ 20 meter i latitudriktning
+      sorted.forEach((post, i) => {
+        const angle = (2 * Math.PI * i) / sorted.length - Math.PI / 2;
+        result[post.id] = [
+          post.lat + radius * Math.cos(angle),
+          post.lng + radius * Math.sin(angle),
+        ];
+      });
+    }
+  }
+
+  return result;
+}
+
 // ─── Huvudkomponent ────────────────────────────────────────────────────────────
 
 export default function Map() {
@@ -203,6 +237,7 @@ export default function Map() {
 
   // Inlägg
   const [posts, setPosts] = useState<Post[]>([]);
+  const jitteredPositions = useMemo(() => computeJitteredPositions(posts), [posts]);
 
   // Historik — null = idag (live), annars ett datum
   const [historyDate, setHistoryDate] = useState<Date | null>(null);
@@ -1035,8 +1070,10 @@ export default function Map() {
         )}
 
         {/* Inlägg */}
-        {posts.map((post) => (
-          <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={[post.lat, post.lng]} icon={makeIcon(post.category, post.upvote_count, post.downvote_count)}>
+        {posts.map((post) => {
+          const pos = jitteredPositions[post.id] ?? [post.lat, post.lng] as [number, number];
+          return (
+          <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={pos} icon={makeIcon(post.category, post.upvote_count, post.downvote_count)}>
             <Popup>
               <div className="text-sm min-w-[180px]">
                 <div className="flex items-center gap-2 mb-1">
@@ -1107,7 +1144,8 @@ export default function Map() {
               </div>
             </Popup>
           </Marker>
-        ))}
+          );
+        })}
       </MapContainer>
     </div>
   );
