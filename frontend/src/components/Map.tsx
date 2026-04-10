@@ -1109,6 +1109,7 @@ export default function Map() {
         zoomControl={false}
         attributionControl={false}
         >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <GetMapInstance mapRef={mapRef} />
         <LocateUser
           onLocate={(lat, lng) => {
