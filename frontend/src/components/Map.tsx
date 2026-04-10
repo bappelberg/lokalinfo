@@ -1005,7 +1005,7 @@ export default function Map() {
         </div>
       )}
       {/* ── Kategorifilter (vänster sida) ── */}
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-1">
+      <div className="absolute left-3 top-1/3 -translate-y-1/2 z-[1000] flex flex-col gap-1">
         <button
           onClick={toggleAll}
           className={`rounded-full px-2 py-1 text-[10px] font-semibold shadow transition-colors border ${
@@ -1102,11 +1102,13 @@ export default function Map() {
       </div>
 
       {/* ── Karta ── */}
-      <MapContainer center={[62.0, 15.0]} zoom={5} className="h-full w-full">
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+      <MapContainer
+        center={[62.0, 15.0]}
+        zoom={5}
+        className="h-full w-full"
+        zoomControl={false}
+        attributionControl={false}
+        >
         <GetMapInstance mapRef={mapRef} />
         <LocateUser
           onLocate={(lat, lng) => {
