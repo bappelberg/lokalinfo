@@ -318,6 +318,10 @@ export default function Map() {
     document.body.removeChild(el);
   }
 
+  // UI-synlighet
+  const [showCarousel, setShowCarousel] = useState(true);
+  const [showCategories, setShowCategories] = useState(true);
+
   // Thread panel
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -1005,81 +1009,103 @@ export default function Map() {
         </div>
       )}
       {/* ── Kategorifilter (vänster sida) ── */}
-      <div className="absolute left-3 top-1/3 -translate-y-1/2 z-[1000] flex flex-col gap-1">
+      <div className="absolute left-3 top-16 z-[1000] flex flex-col gap-1">
         <button
-          onClick={toggleAll}
-          className={`rounded-full px-2 py-1 text-[10px] font-semibold shadow transition-colors border ${
-            allActive
-              ? "bg-gray-800 text-white border-gray-800"
-              : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
-          }`}
+          onClick={() => setShowCategories((s) => !s)}
+          title={showCategories ? "Dölj kategorier" : "Visa kategorier"}
+          className="self-start rounded-full px-2 py-1 text-[10px] font-semibold shadow transition-colors border bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
         >
-          Alla
+          {showCategories ? "◀" : "▶"}
         </button>
-        {Object.entries(CATEGORIES).map(([key, { label, color }]) => {
-          const active = activeCategories.has(key);
-          return (
+        {showCategories && (
+          <>
             <button
-              key={key}
-              onClick={() => toggleCategory(key)}
-              title={label}
-              className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2 py-1 text-[10px] font-medium shadow transition-all border ${
-                active
-                  ? "bg-white border-transparent text-gray-800"
-                  : "bg-white/60 border-gray-100 text-gray-300"
+              onClick={toggleAll}
+              className={`rounded-full px-2 py-1 text-[10px] font-semibold shadow transition-colors border ${
+                allActive
+                  ? "bg-gray-800 text-white border-gray-800"
+                  : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
               }`}
-              style={{ borderLeftColor: active ? color : undefined, borderLeftWidth: active ? 3 : undefined }}
             >
-              <span
-                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: active ? color : "#d1d5db" }}
-              />
-              {label}
+              Alla
             </button>
-          );
-        })}
+            {Object.entries(CATEGORIES).map(([key, { label, color }]) => {
+              const active = activeCategories.has(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleCategory(key)}
+                  title={label}
+                  className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2 py-1 text-[10px] font-medium shadow transition-all border ${
+                    active
+                      ? "bg-white border-transparent text-gray-800"
+                      : "bg-white/60 border-gray-100 text-gray-300"
+                  }`}
+                  style={{ borderLeftColor: active ? color : undefined, borderLeftWidth: active ? 3 : undefined }}
+                >
+                  <span
+                    className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: active ? color : "#d1d5db" }}
+                  />
+                  {label}
+                </button>
+              );
+            })}
+          </>
+        )}
       </div>
 
       {/* ── Senaste nytt: Slimmad Horisontell karusell ── */}
-      <div className="absolute bottom-24 left-0 right-0 z-[1000] flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar snap-x">
-        {filteredPosts
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .map((post) => (
-            <div
-              key={post.id}
-              onClick={() => {
-                // Stäng sidopanel och eventuell öppen popup (fixar bug #2)
-                if (selectedPost) {
-                  setSelectedPost(null);
-                  setComments([]);
-                  setCommentError(false);
-                }
-                mapRef.current?.closePopup();
-                // Flyg till kortet och öppna dess popup (feature #1)
-                setTarget({ lat: post.lat, lon: post.lng });
-                setTimeout(() => {
-                  markerRefs.current[post.id]?.openPopup();
-                }, 300);
-              }}
-              className="flex-shrink-0 w-56 bg-white/90 backdrop-blur shadow-md rounded-xl p-2.5 border-l-4 cursor-pointer snap-center active:scale-95 transition-transform duration-200"
-              style={{ borderLeftColor: CATEGORIES[post.category]?.color ?? "#6b7280" }}
-            >
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[9px] font-bold uppercase opacity-60 tracking-tight">
-                  {CATEGORIES[post.category]?.label}
-                </span>
-                <span className="text-[9px] text-gray-400 font-medium">
-                  {formatTime(post.created_at)}
-                </span>
-              </div>
-              <h3 className="text-xs font-bold text-gray-900 truncate">
-                {post.title}
-              </h3>
-              <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                {post.content}
-              </p>
-            </div>
-          ))}
+      <div className="absolute bottom-24 left-0 right-0 z-[1000]">
+        <div className="flex items-center px-4 mb-1">
+          <button
+            onClick={() => setShowCarousel((s) => !s)}
+            title={showCarousel ? "Dölj karusell" : "Visa karusell"}
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold shadow bg-white/90 text-gray-400 border border-gray-200 hover:bg-gray-50"
+          >
+            {showCarousel ? "▼" : "▲"}
+          </button>
+        </div>
+        {showCarousel && (
+          <div className="flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar snap-x">
+            {filteredPosts
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .map((post) => (
+                <div
+                  key={post.id}
+                  onClick={() => {
+                    if (selectedPost) {
+                      setSelectedPost(null);
+                      setComments([]);
+                      setCommentError(false);
+                    }
+                    mapRef.current?.closePopup();
+                    setTarget({ lat: post.lat, lon: post.lng });
+                    setTimeout(() => {
+                      markerRefs.current[post.id]?.openPopup();
+                    }, 300);
+                  }}
+                  className="flex-shrink-0 w-56 bg-white/90 backdrop-blur shadow-md rounded-xl p-2.5 border-l-4 cursor-pointer snap-center active:scale-95 transition-transform duration-200"
+                  style={{ borderLeftColor: CATEGORIES[post.category]?.color ?? "#6b7280" }}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[9px] font-bold uppercase opacity-60 tracking-tight">
+                      {CATEGORIES[post.category]?.label}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-medium">
+                      {formatTime(post.created_at)}
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-gray-900 truncate">
+                    {post.title}
+                  </h3>
+                  <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                    {post.content}
+                  </p>
+                </div>
+              ))}
+          </div>
+        )}
       </div>
       {/* ── Sökfält (botten) ── */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] w-80 bg-white rounded-xl p-3 shadow-lg">
