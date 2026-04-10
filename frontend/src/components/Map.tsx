@@ -1055,17 +1055,17 @@ export default function Map() {
         )}
       </div>
 
+      {/* ── Karusell toggle (fast position) ── */}
+      <button
+        onClick={() => setShowCarousel((s) => !s)}
+        title={showCarousel ? "Dölj karusell" : "Visa karusell"}
+        className="absolute bottom-[11.5rem] right-4 z-[1001] rounded-full px-2 py-0.5 text-[10px] font-semibold shadow bg-white/90 text-gray-400 border border-gray-200 hover:bg-gray-50"
+      >
+        {showCarousel ? "▼" : "▲"}
+      </button>
+
       {/* ── Senaste nytt: Slimmad Horisontell karusell ── */}
       <div className="absolute bottom-24 left-0 right-0 z-[1000]">
-        <div className="flex items-center px-4 mb-1">
-          <button
-            onClick={() => setShowCarousel((s) => !s)}
-            title={showCarousel ? "Dölj karusell" : "Visa karusell"}
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold shadow bg-white/90 text-gray-400 border border-gray-200 hover:bg-gray-50"
-          >
-            {showCarousel ? "▼" : "▲"}
-          </button>
-        </div>
         {showCarousel && (
           <div className="flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar snap-x">
             {filteredPosts
