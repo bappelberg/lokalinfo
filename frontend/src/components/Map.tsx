@@ -361,7 +361,7 @@ export default function Map() {
     iconAnchor: [8, 8],
   });
 
-  const [dateInput, setDateInput] = useState("");
+  const [dateInput, setDateInput] = useState(() => toDateString(today));
 
   const fetchPosts = useCallback(async (lat: number, lng: number, date: Date | null) => {
     try {
@@ -407,11 +407,7 @@ export default function Map() {
   }, [historyDate, fetchPosts]);
 
   useEffect(() => {
-    if (historyDate) {
-      setDateInput(toDateString(historyDate));
-    } else {
-      setDateInput("");
-    }
+    setDateInput(historyDate ? toDateString(historyDate) : toDateString(today)); 
   }, [historyDate]);
 
   async function handleSearch(e: React.SubmitEvent) {
