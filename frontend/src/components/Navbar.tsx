@@ -9,7 +9,7 @@ export default function Navbar() {
   // Centraliserad lista för att enkelt lägga till/ta bort sidor
   const links = [
     { href: "/", label: "Karta" },
-    { href: "/om", label: "Om oss" },
+    { href: "/about", label: "Om oss" },
     { href: "/loggain", label: "Logga in" },
     { href: "/registrera", label: "Registrera", isButton: true },
   ];
