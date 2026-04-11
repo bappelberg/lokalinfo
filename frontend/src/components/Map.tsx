@@ -20,7 +20,6 @@ L.Icon.Default.mergeOptions({
 });
 
 const API_URL = "/api";
-const HISTORY_DAYS = 30;
 
 // ─── Kategorier ────────────────────────────────────────────────────────────────
 
@@ -493,12 +492,24 @@ export default function Map() {
 
   function formatTime(iso: string) {
     const utc = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
-    const diff = (Date.now() - new Date(utc).getTime()) / 60000;
-    if (diff < 60) return `${Math.round(diff)} min sedan`;
-    return `${Math.round(diff / 60)} tim sedan`;
+    const diffMs = Date.now() - new Date(utc).getTime();
+
+    const seconds = Math.floor(diffMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const years = Math.floor(days / 365);
+
+    if (seconds < 10) return "nu";
+    if (seconds < 60) return `${seconds} sek sedan`;
+    if (minutes < 60) return `${minutes} min sedan`;
+    if (hours < 24) return `${hours} tim sedan`;
+    if (days < 7) return `${days} dag${days === 1 ? "" : "ar"} sedan`;
+    if (days < 30) return `${Math.floor(days / 7)} v sedan`;
+    if (days < 365) return `${Math.floor(days / 30)} mån sedan`;
+    return `${years} år sedan`;
   }
 
-  const minDate = toDateString(addDays(today, -HISTORY_DAYS));
   const maxDate = toDateString(today);
 
     // Votes on posts (localStorage)
@@ -869,10 +880,9 @@ export default function Map() {
           )}
           {showDatePicker && (
             <div className="border-t border-gray-100 px-3 py-2">
-              <p className="text-xs text-gray-400 mb-1">Välj dag (max 30 dagar tillbaka)</p>
+              <p className="text-xs text-gray-400 mb-1">Välj dag</p>
               <input
                 type="date"
-                min={minDate}
                 max={maxDate}
                 value={dateInput}
                 onChange={(e) => {
