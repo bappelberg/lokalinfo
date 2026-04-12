@@ -30,12 +30,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session: { strategy: "jwt" },
     callbacks: {
-        jwt({ token, user }) {
+        jwt({ token, user, trigger, session }) {
             if (user) {
                 token.id = user.id;
                 token.username = user.name;
                 token.role = (user as any).role;
                 token.accessToken = (user as any).accessToken;
+                token.picture = (user as any).image ?? null;
+            }
+            if (trigger === "update" && session?.image !== undefined) {
+                token.picture = session.image;
             }
             return token;
         },
@@ -43,6 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (session.user) {
                 session.user.id = token.id as string;
                 session.user.name = token.username as string;
+                session.user.image = token.picture as string | null;
                 (session as any).role = token.role;
                 (session as any).accessToken = token.accessToken;
             }

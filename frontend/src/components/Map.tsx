@@ -112,6 +112,7 @@ type Post = {
   is_hidden: boolean;
   image_url: string | null;
   author_username: string | null;
+  author_avatar_url: string | null;
 };
 
 type Comment = {
@@ -122,6 +123,8 @@ type Comment = {
   upvote_count: number;
   downvote_count: number;
   created_at: string;
+  author_username: string | null;
+  author_avatar_url: string | null;
 };
 
 // ─── Kartkomponenter ───────────────────────────────────────────────────────────
@@ -177,6 +180,18 @@ function FlyTo({
     }, [target, map, onArrived, onDone]);
 
     return null;
+}
+
+function Avatar({ url, username, size = 6 }: { url: string | null; username: string | null; size?: number }) {
+  if (!username) return null;
+  const px = size * 4;
+  const style = { width: px, height: px, minWidth: px, minHeight: px };
+  if (url) return <img src={url} alt={username} style={style} className="rounded-full object-cover flex-shrink-0" />;
+  return (
+    <span style={style} className="rounded-full flex-shrink-0 bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-xs">
+      {username[0].toUpperCase()}
+    </span>
+  );
 }
 
 function MapClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
@@ -638,51 +653,60 @@ export default function Map() {
       {/* ── Tråd-panel ── */}
       {selectedPost && (
         <div className="absolute inset-y-0 right-0 z-[1002] w-full max-w-sm bg-white shadow-2xl flex flex-col">
+          {/* Färgad topplinje per kategori */}
+          <div className="h-1 flex-shrink-0" style={{ background: CATEGORIES[selectedPost.category]?.color ?? "#6b7280" }} />
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <span
-              className="rounded-full px-2 py-0.5 text-white text-xs font-medium"
-              style={{ background: CATEGORIES[selectedPost.category]?.color ?? "#6b7280" }}
-            >
-              {CATEGORIES[selectedPost.category]?.label ?? selectedPost.category}
-            </span>
-            <span className="text-xs text-gray-400">{formatTime(selectedPost.created_at)}</span>
+            <div className="flex items-center gap-2">
+              <span
+                className="rounded-full px-2.5 py-0.5 text-white text-[11px] font-semibold"
+                style={{ background: CATEGORIES[selectedPost.category]?.color ?? "#6b7280" }}
+              >
+                {CATEGORIES[selectedPost.category]?.label ?? selectedPost.category}
+              </span>
+              <span className="text-xs text-gray-400">{formatTime(selectedPost.created_at)}</span>
+            </div>
             <button
               onClick={() => { setSelectedPost(null); setComments([]); setCommentError(false); }}
-              className="ml-2 text-gray-400 hover:text-gray-700 text-xl leading-none"
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 text-base leading-none transition-colors"
             >
               ×
             </button>
           </div>
-          <div className="px-4 py-3 border-b border-gray-100">
+          <div className="px-4 py-4 border-b border-gray-100 bg-gray-50/50">
             {selectedPost.title && (
-              <p className="font-semibold text-gray-900 mb-1">{selectedPost.title}</p>
+              <p className="font-bold text-gray-900 text-base mb-2 leading-snug">{selectedPost.title}</p>
             )}
             {selectedPost.author_username && (
-              <p className="text-xs text-gray-400 mb-1">@{selectedPost.author_username}</p>
+              <div className="flex items-center gap-1.5 mb-2">
+                <Avatar url={selectedPost.author_avatar_url} username={selectedPost.author_username} size={5} />
+                <span className="text-xs text-gray-500 font-medium">@{selectedPost.author_username}</span>
+              </div>
             )}
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedPost.content}</p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedPost.content}</p>
             {selectedPost.image_url && (
               <img
                 src={selectedPost.image_url}
                 alt="Inläggsbild"
-                className="mt-2 w-full rounded-lg object-contain max-h-48"
+                className="mt-3 w-full rounded-xl object-cover max-h-52"
               />
             )}
-            <div className="flex items-center gap-3 mt-3">
+            <div className="flex items-center gap-2 mt-3">
               <button
                 onClick={() => handleVote(selectedPost.id, "up")}
-                disabled={false}
-                className={`flex items-center gap-1 text-xs font-medium transition-colors ${
-                  votes[selectedPost.id] === "up" ? "text-green-600" : "text-gray-400 hover:text-green-500 disabled:text-gray-300"
+                className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                  votes[selectedPost.id] === "up"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500 hover:bg-green-50 hover:text-green-600"
                 }`}
               >
                 ▲ {selectedPost.upvote_count}
               </button>
               <button
                 onClick={() => handleVote(selectedPost.id, "down")}
-                disabled={false}
-                className={`flex items-center gap-1 text-xs font-medium transition-colors ${
-                  votes[selectedPost.id] === "down" ? "text-red-600" : "text-gray-400 hover:text-red-500 disabled:text-gray-300"
+                className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                  votes[selectedPost.id] === "down"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600"
                 }`}
               >
                 ▼ {selectedPost.downvote_count}
@@ -691,69 +715,75 @@ export default function Map() {
                 onClick={() => sharePost(selectedPost.id)}
                 className="ml-auto text-xs text-gray-400 hover:text-blue-500 transition-colors"
               >
-                {copied === selectedPost.id ? "Kopierat!" : "Dela"}
+                {copied === selectedPost.id ? "✓ Kopierat" : "Dela"}
               </button>
               {isLive && (
                 <button
                   onClick={() => handleReport(selectedPost.id)}
                   disabled={reported.has(selectedPost.id)}
-                  className="ml-2 text-xs text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
+                  className="text-xs text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
                 >
                   {reported.has(selectedPost.id) ? "Rapporterat" : "Rapportera"}
                 </button>
               )}
             </div>
           </div>
-          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
+            <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">
               Kommentarer ({comments.length})
             </span>
-            <div className="flex gap-1">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
               <button
                 onClick={() => setCommentSort("popular")}
-                className={`text-xs px-2 py-1 rounded-lg transition-colors ${
-                  commentSort === "popular" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-400 hover:text-gray-600"
+                className={`text-xs px-2.5 py-1 rounded-md transition-colors font-medium ${
+                  commentSort === "popular" ? "bg-white text-gray-800 shadow-sm" : "text-gray-400 hover:text-gray-600"
                 }`}
               >
                 Populära
               </button>
               <button
                 onClick={() => setCommentSort("newest")}
-                className={`text-xs px-2 py-1 rounded-lg transition-colors ${
-                  commentSort === "newest" ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-400 hover:text-gray-600"
+                className={`text-xs px-2.5 py-1 rounded-md transition-colors font-medium ${
+                  commentSort === "newest" ? "bg-white text-gray-800 shadow-sm" : "text-gray-400 hover:text-gray-600"
                 }`}
               >
                 Senaste
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {commentError && (
               <p className="text-sm text-red-400 text-center py-6">Kunde inte ladda kommentarer. <button onClick={() => fetchComments(selectedPost!.id, commentSort)} className="underline">Försök igen</button></p>
             )}
             {!commentError && buildTree(comments).length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">Inga kommentarer ännu — var först!</p>
+              <p className="text-sm text-gray-400 text-center py-8">Inga kommentarer ännu — var först!</p>
             )}
             {buildTree(comments).map((comment) => (
-              <div key={comment.id}>
+              <div key={comment.id} className="bg-gray-50 rounded-xl px-3 py-2.5">
                 <div className="text-sm">
-                  <p className="text-gray-800 whitespace-pre-wrap">{comment.content}</p>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-xs text-gray-400">{formatTime(comment.created_at)}</span>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    {comment.author_username && (
+                      <>
+                        <Avatar url={comment.author_avatar_url} username={comment.author_username} size={5} />
+                        <span className="text-xs text-gray-600 font-semibold">@{comment.author_username}</span>
+                      </>
+                    )}
+                    <span className="text-[10px] text-gray-400 ml-auto">{formatTime(comment.created_at)}</span>
+                  </div>
+                  <p className="text-gray-800 text-[13px] whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                  <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={() => handleCommentVote(comment.id, "up")}
-                      disabled={false}
-                      className={`text-xs transition-colors ${
-                        commentVotes[comment.id] === "up" ? "text-green-600 font-medium" : "text-gray-400 hover:text-green-500 disabled:text-gray-300"
+                      className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                        commentVotes[comment.id] === "up" ? "bg-green-100 text-green-700" : "bg-white text-gray-400 hover:text-green-600"
                       }`}
                     >
                       ▲ {comment.upvote_count}
                     </button>
                     <button
                       onClick={() => handleCommentVote(comment.id, "down")}
-                      disabled={false}
-                      className={`text-xs transition-colors ${
-                        commentVotes[comment.id] === "down" ? "text-red-600 font-medium" : "text-gray-400 hover:text-red-500 disabled:text-gray-300"
+                      className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                        commentVotes[comment.id] === "down" ? "bg-red-100 text-red-700" : "bg-white text-gray-400 hover:text-red-600"
                       }`}
                     >
                       ▼ {comment.downvote_count}
@@ -761,26 +791,26 @@ export default function Map() {
                     {isLive && (
                       <button
                         onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
-                        className="text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                        className="ml-auto text-[11px] text-gray-400 hover:text-blue-500 transition-colors font-medium"
                       >
                         {replyTo === comment.id ? "Avbryt" : "Svara"}
                       </button>
                     )}
                   </div>
                   {replyTo === comment.id && (
-                    <div className="mt-2 ml-3 flex gap-2">
+                    <div className="mt-2 flex gap-2">
                       <textarea
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                         placeholder="Skriv ett svar…"
                         maxLength={500}
                         rows={2}
-                        className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-base resize-none outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-base resize-none outline-none focus:ring-2 focus:ring-blue-400"
                       />
                       <button
                         onClick={() => handleAddComment(replyText, comment.id)}
                         disabled={commentSubmitting || !replyText.trim()}
-                        className="self-end rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="self-end rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
                       >
                         Skicka
                       </button>
@@ -788,26 +818,32 @@ export default function Map() {
                   )}
                 </div>
                 {comment.replies.length > 0 && (
-                  <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-100 pl-3">
+                  <div className="ml-3 mt-2.5 space-y-2.5 border-l-2 border-gray-200 pl-3">
                     {comment.replies.map((reply) => (
                       <div key={reply.id} className="text-sm">
-                        <p className="text-gray-700 whitespace-pre-wrap">{reply.content}</p>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span className="text-xs text-gray-400">{formatTime(reply.created_at)}</span>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {reply.author_username && (
+                            <>
+                              <Avatar url={reply.author_avatar_url} username={reply.author_username} size={4} />
+                              <span className="text-xs text-gray-500 font-semibold">@{reply.author_username}</span>
+                            </>
+                          )}
+                          <span className="text-[10px] text-gray-400 ml-auto">{formatTime(reply.created_at)}</span>
+                        </div>
+                        <p className="text-gray-700 text-[13px] whitespace-pre-wrap leading-relaxed">{reply.content}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
                           <button
                             onClick={() => handleCommentVote(reply.id, "up")}
-                            disabled={false}
-                            className={`text-xs transition-colors ${
-                              commentVotes[reply.id] === "up" ? "text-green-600 font-medium" : "text-gray-400 hover:text-green-500 disabled:text-gray-300"
+                            className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                              commentVotes[reply.id] === "up" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400 hover:text-green-600"
                             }`}
                           >
                             ▲ {reply.upvote_count}
                           </button>
                           <button
                             onClick={() => handleCommentVote(reply.id, "down")}
-                            disabled={false}
-                            className={`text-xs transition-colors ${
-                              commentVotes[reply.id] === "down" ? "text-red-600 font-medium" : "text-gray-400 hover:text-red-500 disabled:text-gray-300"
+                            className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                              commentVotes[reply.id] === "down" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-400 hover:text-red-600"
                             }`}
                           >
                             ▼ {reply.downvote_count}
@@ -821,20 +857,20 @@ export default function Map() {
             ))}
           </div>
           {isLive && (
-            <div className="px-4 py-3 border-t border-gray-100">
-              <div className="flex gap-2">
+            <div className="px-4 py-3 border-t border-gray-100 bg-white">
+              <div className="flex gap-2 items-end">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Skriv en kommentar… (max 500 tecken)"
+                  placeholder="Skriv en kommentar…"
                   maxLength={500}
                   rows={2}
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-base resize-none outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-base resize-none outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-colors"
                 />
                 <button
                   onClick={() => handleAddComment(newComment, null)}
                   disabled={commentSubmitting || !newComment.trim()}
-                  className="self-end rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
                 >
                   Skicka
                 </button>
@@ -1077,7 +1113,7 @@ export default function Map() {
       {/* ── Senaste nytt: Slimmad Horisontell karusell ── */}
       <div className="absolute bottom-24 left-0 right-0 z-[1000]">
         {showCarousel && (
-          <div className="flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar snap-x">
+          <div className="flex gap-3 overflow-x-auto px-4 pb-3 pt-1 no-scrollbar snap-x">
             {filteredPosts
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
               .map((post) => (
@@ -1095,23 +1131,41 @@ export default function Map() {
                       markerRefs.current[post.id]?.openPopup();
                     }, 300);
                   }}
-                  className="flex-shrink-0 w-56 bg-white/90 backdrop-blur shadow-md rounded-xl p-2.5 border-l-4 cursor-pointer snap-center active:scale-95 transition-transform duration-200"
-                  style={{ borderLeftColor: CATEGORIES[post.category]?.color ?? "#6b7280" }}
+                  className="flex-shrink-0 w-44 bg-white shadow-lg rounded-2xl overflow-hidden cursor-pointer snap-center active:scale-[0.97] hover:shadow-xl transition-all duration-200"
                 >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[9px] font-bold uppercase opacity-60 tracking-tight">
-                      {CATEGORIES[post.category]?.label}
-                    </span>
-                    <span className="text-[9px] text-gray-400 font-medium">
-                      {formatTime(post.created_at)}
-                    </span>
+                  <div className="h-1" style={{ background: CATEGORIES[post.category]?.color ?? "#6b7280" }} />
+                  <div className="p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-white text-[8px] font-bold uppercase tracking-wide"
+                        style={{ background: CATEGORIES[post.category]?.color ?? "#6b7280" }}
+                      >
+                        {CATEGORIES[post.category]?.label}
+                      </span>
+                      <span className="text-[8px] text-gray-400">{formatTime(post.created_at)}</span>
+                    </div>
+                    <h3 className="text-[11px] font-bold text-gray-900 truncate leading-tight">
+                      {post.title || post.content}
+                    </h3>
+                    {post.title && (
+                      <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                        {post.content}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-gray-100">
+                      <span className="flex items-center gap-0.5 text-[9px] text-gray-400">
+                        <span className="text-green-500 font-bold">▲</span> {post.upvote_count}
+                      </span>
+                      <span className="flex items-center gap-0.5 text-[9px] text-gray-400">
+                        💬 {post.comment_count}
+                      </span>
+                      {post.author_username && (
+                        <div className="flex items-center gap-1 ml-auto">
+                          <Avatar url={post.author_avatar_url} username={post.author_username} size={3} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="text-xs font-bold text-gray-900 truncate">
-                    {post.title}
-                  </h3>
-                  <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                    {post.content}
-                  </p>
                 </div>
               ))}
           </div>
@@ -1181,67 +1235,68 @@ export default function Map() {
           <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={pos} icon={makeIcon(post.category, post.upvote_count, post.downvote_count)}>
             <Popup>
               <div
-                className="text-sm min-w-[180px] cursor-pointer"
+                className="text-sm min-w-[230px] max-w-[270px] cursor-pointer"
                 onClick={() => {
                   setSelectedPost(post);
                   setCommentSort("popular");
                   fetchComments(post.id, "popular");
                 }}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                   <span
-                    className="rounded-full px-2 py-0.5 text-white text-xs font-medium"
+                    className="rounded-full px-2.5 py-0.5 text-white text-[11px] font-semibold"
                     style={{ background: CATEGORIES[post.category]?.color ?? "#6b7280" }}
                   >
                     {CATEGORIES[post.category]?.label ?? post.category}
                   </span>
-                  <span className="text-gray-400 text-xs">{formatTime(post.created_at)}</span>
+                  <span className="text-gray-400 text-[11px] ml-auto">{formatTime(post.created_at)}</span>
                 </div>
-                <p className="font-semibold text-gray-900 mb-1">{post.title}</p>
-                {post.author_username && (
-                  <p className="text-[11px] text-gray-400 mb-1">@{post.author_username}</p>
+                {post.title && (
+                  <p className="font-bold text-gray-900 mb-1 text-[13px] leading-snug">{post.title}</p>
                 )}
-                <p className="text-gray-700 my-2 whitespace-pre-wrap">{post.content}</p>
+                {post.author_username && (
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Avatar url={post.author_avatar_url} username={post.author_username} size={4} />
+                    <span className="text-[11px] text-gray-400">@{post.author_username}</span>
+                  </div>
+                )}
+                <p className="text-gray-600 text-xs leading-relaxed line-clamp-3 whitespace-pre-wrap">{post.content}</p>
                 {post.image_url && (
                   <img
                     src={post.image_url}
                     alt="Inläggsbild"
-                    className="w-full rounded-lg object-contain max-h-40 mb-2"
+                    className="w-full rounded-lg object-cover max-h-36 mt-2"
                   />
                 )}
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleVote(post.id, "up"); }}
-                      disabled={false}
-                      className={`flex items-center gap-1 text-xs font-medium transition-colors ${
-                        votes[post.id] === "up"
-                          ? "text-green-600"
-                          : "text-gray-400 hover:text-green-500 disabled:text-gray-300"
-                      }`}
-                    >
-                      ▲ {post.upvote_count}
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleVote(post.id, "down"); }}
-                      disabled={false}
-                      className={`flex items-center gap-1 text-xs font-medium transition-colors ${
-                        votes[post.id] === "down"
-                          ? "text-red-600"
-                          : "text-gray-400 hover:text-red-500 disabled:text-gray-300"
-                      }`}
-                    >
-                      ▼ {post.downvote_count}
-                    </button>
-                    <span className="flex items-center gap-1 text-xs text-gray-400">
-                      &#128172; {post.comment_count}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-gray-100">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleVote(post.id, "up"); }}
+                    className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                      votes[post.id] === "up"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500 hover:bg-green-50 hover:text-green-600"
+                    }`}
+                  >
+                    ▲ {post.upvote_count}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleVote(post.id, "down"); }}
+                    className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                      votes[post.id] === "down"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                    }`}
+                  >
+                    ▼ {post.downvote_count}
+                  </button>
+                  <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                    💬 {post.comment_count}
+                  </span>
                   <button
                     onClick={(e) => { e.stopPropagation(); sharePost(post.id); }}
-                    className="text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                    className="ml-auto text-[11px] text-gray-400 hover:text-blue-500 transition-colors"
                   >
-                    {copied === post.id ? "Kopierat!" : "Dela"}
+                    {copied === post.id ? "✓ Kopierat" : "Dela"}
                   </button>
                 </div>
               </div>

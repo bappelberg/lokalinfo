@@ -1,11 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from database import get_session
-from models import Comment, CommentCreate, CommentOut, CommentVote, Post, VoteOut
+from models import Comment, CommentCreate, CommentOut, CommentVote, Post, User, VoteOut
 from utils import get_client_ip
 
 router = APIRouter(prefix="/posts", tags=["comments"])
@@ -45,6 +45,7 @@ async def create_comment(
     post_id: UUID,
     data: CommentCreate,
     session: AsyncSession = Depends(get_session),
+    x_user_id: str | None = Header(default=None),
 ):
     post = await session.get(Post, post_id)
     if not post or post.is_deleted:
@@ -55,7 +56,24 @@ async def create_comment(
         if not parent or parent.is_deleted or parent.post_id != post_id:
             raise HTTPException(status_code=404, detail="Parent comment not found.")
 
-    comment = Comment(post_id=post_id, parent_id=data.parent_id, content=data.content)
+    author_username = None
+    author_avatar_url = None
+    if x_user_id:
+        try:
+            user = await session.get(User, UUID(x_user_id))
+            if user:
+                author_username = user.username
+                author_avatar_url = user.avatar_url
+        except ValueError:
+            pass
+
+    comment = Comment(
+        post_id=post_id,
+        parent_id=data.parent_id,
+        content=data.content,
+        author_username=author_username,
+        author_avatar_url=author_avatar_url,
+    )
     post.comment_count += 1
     session.add(comment)
     session.add(post)

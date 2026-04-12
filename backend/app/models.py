@@ -40,6 +40,7 @@ class Post(SQLModel, table=True):
     image_url: str | None = Field(default=None, max_length=500)
     user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
     author_username: str | None = Field(default=None, max_length=50)
+    author_avatar_url: str | None = Field(default=None, max_length=500)
 
 
 class PostCreate(SQLModel):
@@ -66,6 +67,7 @@ class PostOut(SQLModel):
     is_hidden: bool
     image_url: str | None
     author_username: str | None
+    author_avatar_url: str | None
 
     model_config = {"from_attributes": True}
 
@@ -95,6 +97,8 @@ class Comment(SQLModel, table=True):
     downvote_count: int = Field(default=0)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     is_deleted: bool = Field(default=False)
+    author_username: str | None = Field(default=None, max_length=50)
+    author_avatar_url: str | None = Field(default=None, max_length=500)
 
 class CommentCreate(SQLModel):
     content: str = Field(min_length=1, max_length=500)
@@ -108,6 +112,8 @@ class CommentOut(SQLModel):
     upvote_count: int
     downvote_count: int
     created_at: datetime
+    author_username: str | None
+    author_avatar_url: str | None
 
     model_config = {"from_attributes": True}
 

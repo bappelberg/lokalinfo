@@ -1,8 +1,10 @@
+from uuid import UUID
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import or_
-from sqlmodel import select
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from database import get_session
@@ -59,3 +61,34 @@ async def login(body: LoginRequest, session: AsyncSession = Depends(get_session)
         "username": user.username,
         "role": user.role,
     }
+
+
+# ── Användarinställningar ────────────────────────────────────────────────────
+
+users_router = APIRouter(prefix="/users", tags=["users"])
+
+
+class AvatarUpdate(SQLModel):
+    avatar_url: str | None
+
+
+@users_router.patch("/me/avatar", response_model=UserOut)
+async def update_avatar(
+    body: AvatarUpdate,
+    session: AsyncSession = Depends(get_session),
+    x_user_id: str | None = Header(default=None),
+):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Inte inloggad")
+    try:
+        user = await session.get(User, UUID(x_user_id))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ogiltigt användar-ID")
+    if not user:
+        raise HTTPException(status_code=404, detail="Användaren hittades inte")
+
+    user.avatar_url = body.avatar_url
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user

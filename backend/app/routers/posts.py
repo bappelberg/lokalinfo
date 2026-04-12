@@ -65,6 +65,7 @@ async def create_post(
 
     user_id = None
     author_username = None
+    author_avatar_url = None
     if x_user_id:
         try:
             uid = UUID(x_user_id)
@@ -72,6 +73,7 @@ async def create_post(
             if user:
                 user_id = user.id
                 author_username = user.username
+                author_avatar_url = user.avatar_url
         except ValueError:
             pass
 
@@ -84,6 +86,7 @@ async def create_post(
         image_url=data.image_url,
         user_id=user_id,
         author_username=author_username,
+        author_avatar_url=author_avatar_url,
     )
 
     session.add(post)

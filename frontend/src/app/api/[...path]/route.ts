@@ -52,6 +52,25 @@ export async function POST(
   return NextResponse.json(data, { status: res.status });
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params;
+  const url = `${BACKEND}/${path.filter(Boolean).join("/")}`;
+  const body = await req.text();
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": req.headers.get("content-type") ?? "application/json",
+      ...(await authedHeaders(req)),
+    },
+    body: body || undefined,
+  });
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }

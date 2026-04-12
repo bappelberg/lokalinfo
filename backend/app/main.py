@@ -15,6 +15,7 @@ from gdelt_master import gdelt_sync_loop
 from police import police_sync_loop
 from svt_nyheter_fetcher import svt_sync_loop
 from routers import admin, auth, comments, posts
+from routers.auth import users_router
 
 SEED = [
     # (title, content, category, lat, lng, age, upvotes, downvotes)
@@ -334,6 +335,9 @@ async def lifespan(app: FastAPI):
         await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)"))
         await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES \"user\"(id)"))
         await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS author_username VARCHAR(50)"))
+        await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS author_avatar_url VARCHAR(500)"))
+        await conn.execute(text("ALTER TABLE comment ADD COLUMN IF NOT EXISTS author_username VARCHAR(50)"))
+        await conn.execute(text("ALTER TABLE comment ADD COLUMN IF NOT EXISTS author_avatar_url VARCHAR(500)"))
 
     if settings.debug:
         async with AsyncSessionLocal() as session:
@@ -417,3 +421,4 @@ app.include_router(posts.router)
 app.include_router(admin.router)
 app.include_router(comments.router)
 app.include_router(auth.router)
+app.include_router(users_router)

@@ -34,7 +34,16 @@ export default function Navbar() {
           ))}
           {session ? (
             <>
-              <span className="text-blue-500 text-xs truncate max-w-[140px]">{session.user?.name ?? session.user?.email}</span>
+              <Link href="/settings" className="flex items-center gap-1.5 hover:text-blue-900 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors">
+                {session.user?.image ? (
+                  <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
+                ) : (
+                  <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-semibold text-blue-700">
+                    {(session.user?.name ?? session.user?.email ?? "?")[0].toUpperCase()}
+                  </span>
+                )}
+                <span className="text-blue-500 text-xs truncate max-w-[120px]">{session.user?.name ?? session.user?.email}</span>
+              </Link>
               <button onClick={() => signOut({callbackUrl: "/"})} className="hover:text-blue-900 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors">Logga ut</button>
             </>
           ) : (
@@ -92,9 +101,16 @@ export default function Navbar() {
           ))}
           {session ? (
             <>
-              <span className="text-blue-500 text-xs px-2 truncate">
-                {session.user?.name ?? session.user?.email}
-              </span>
+              <Link href="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2 hover:text-blue-900 hover:bg-blue-100 px-2 py-2 rounded-md transition-colors">
+                {session.user?.image ? (
+                  <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
+                ) : (
+                  <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-semibold text-blue-700">
+                    {(session.user?.name ?? session.user?.email ?? "?")[0].toUpperCase()}
+                  </span>
+                )}
+                <span className="text-xs truncate">{session.user?.name ?? session.user?.email}</span>
+              </Link>
               <button
                 onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }) }}
                 className="hover:text-blue-900 hover:bg-blue-100 px-2 py-2 rounded-md transition-colors text-left"
