@@ -108,7 +108,7 @@ export default function Navbar() {
                 Logga in
               </Link>
               <Link
-                href="/registrera"
+                href="/register"
                 className="bg-blue-600 text-white px-3 py-2.5 rounded-md text-center font-medium mt-1"
                 onClick={() => setOpen(false)}
               >

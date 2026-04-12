@@ -111,6 +111,7 @@ type Post = {
   report_count: number;
   is_hidden: boolean;
   image_url: string | null;
+  author_username: string | null;
 };
 
 type Comment = {
@@ -656,6 +657,9 @@ export default function Map() {
             {selectedPost.title && (
               <p className="font-semibold text-gray-900 mb-1">{selectedPost.title}</p>
             )}
+            {selectedPost.author_username && (
+              <p className="text-xs text-gray-400 mb-1">@{selectedPost.author_username}</p>
+            )}
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedPost.content}</p>
             {selectedPost.image_url && (
               <img
@@ -1194,6 +1198,9 @@ export default function Map() {
                   <span className="text-gray-400 text-xs">{formatTime(post.created_at)}</span>
                 </div>
                 <p className="font-semibold text-gray-900 mb-1">{post.title}</p>
+                {post.author_username && (
+                  <p className="text-[11px] text-gray-400 mb-1">@{post.author_username}</p>
+                )}
                 <p className="text-gray-700 my-2 whitespace-pre-wrap">{post.content}</p>
                 {post.image_url && (
                   <img

@@ -38,6 +38,8 @@ class Post(SQLModel, table=True):
     source: str | None = Field(default=None, max_length=20)
     external_id: str | None = Field(default=None, max_length=50, index=True)
     image_url: str | None = Field(default=None, max_length=500)
+    user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    author_username: str | None = Field(default=None, max_length=50)
 
 
 class PostCreate(SQLModel):
@@ -63,6 +65,7 @@ class PostOut(SQLModel):
     report_count: int
     is_hidden: bool
     image_url: str | None
+    author_username: str | None
 
     model_config = {"from_attributes": True}
 

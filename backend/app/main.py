@@ -332,6 +332,8 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(SQLModel.metadata.create_all)
         # Migrera befintliga tabeller med nya kolumner
         await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)"))
+        await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES \"user\"(id)"))
+        await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS author_username VARCHAR(50)"))
 
     if settings.debug:
         async with AsyncSessionLocal() as session:

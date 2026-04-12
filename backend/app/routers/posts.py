@@ -3,13 +3,13 @@ from datetime import datetime, timedelta, timezone
 from math import asin, cos, radians, sin, sqrt
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import rate_limit
 from database import get_session
-from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, PostVote, ReportOut, VoteOut
+from models import AUTO_HIDE_THRESHOLD, Post, PostCreate, PostOut, PostVote, ReportOut, User, VoteOut
 from utils import get_client_ip
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -55,20 +55,35 @@ async def get_posts(
 async def create_post(
     data: PostCreate,
     request: Request,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    x_user_id: str | None = Header(default=None),
 ):
     ip = get_client_ip(request)
     allowed, msg = rate_limit.check_rate_limit(ip)
     if not allowed:
         raise HTTPException(status_code=429, detail=msg)
-    
+
+    user_id = None
+    author_username = None
+    if x_user_id:
+        try:
+            uid = UUID(x_user_id)
+            user = await session.get(User, uid)
+            if user:
+                user_id = user.id
+                author_username = user.username
+        except ValueError:
+            pass
+
     post = Post(
         title=data.title,
         content=data.content,
         category=data.category,
         lat=data.lat,
         lng=data.lng,
-        image_url=data.image_url
+        image_url=data.image_url,
+        user_id=user_id,
+        author_username=author_username,
     )
 
     session.add(post)
