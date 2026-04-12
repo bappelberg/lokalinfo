@@ -1176,7 +1176,14 @@ export default function Map() {
           return (
           <Marker key={post.id} ref={(r) => { markerRefs.current[post.id] = r; }} position={pos} icon={makeIcon(post.category, post.upvote_count, post.downvote_count)}>
             <Popup>
-              <div className="text-sm min-w-[180px]">
+              <div
+                className="text-sm min-w-[180px] cursor-pointer"
+                onClick={() => {
+                  setSelectedPost(post);
+                  setCommentSort("popular");
+                  fetchComments(post.id, "popular");
+                }}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className="rounded-full px-2 py-0.5 text-white text-xs font-medium"
@@ -1186,14 +1193,7 @@ export default function Map() {
                   </span>
                   <span className="text-gray-400 text-xs">{formatTime(post.created_at)}</span>
                 </div>
-                <p
-                  className="font-semibold text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors"
-                  onClick={() => {
-                    setSelectedPost(post);
-                    setCommentSort("popular");
-                    fetchComments(post.id, "popular");
-                  }}
-                >{post.title}</p>
+                <p className="font-semibold text-gray-900 mb-1">{post.title}</p>
                 <p className="text-gray-700 my-2 whitespace-pre-wrap">{post.content}</p>
                 {post.image_url && (
                   <img
@@ -1205,7 +1205,7 @@ export default function Map() {
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => handleVote(post.id, "up")}
+                      onClick={(e) => { e.stopPropagation(); handleVote(post.id, "up"); }}
                       disabled={false}
                       className={`flex items-center gap-1 text-xs font-medium transition-colors ${
                         votes[post.id] === "up"
@@ -1216,7 +1216,7 @@ export default function Map() {
                       ▲ {post.upvote_count}
                     </button>
                     <button
-                      onClick={() => handleVote(post.id, "down")}
+                      onClick={(e) => { e.stopPropagation(); handleVote(post.id, "down"); }}
                       disabled={false}
                       className={`flex items-center gap-1 text-xs font-medium transition-colors ${
                         votes[post.id] === "down"
@@ -1230,24 +1230,12 @@ export default function Map() {
                       &#128172; {post.comment_count}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => sharePost(post.id)}
-                      className="text-xs text-gray-400 hover:text-blue-500 transition-colors"
-                    >
-                      {copied === post.id ? "Kopierat!" : "Dela"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedPost(post);
-                        setCommentSort("popular");
-                        fetchComments(post.id, "popular");
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                    >
-                      Visa kommentarer →
-                    </button>
-                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); sharePost(post.id); }}
+                    className="text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                  >
+                    {copied === post.id ? "Kopierat!" : "Dela"}
+                  </button>
                 </div>
               </div>
             </Popup>
