@@ -297,7 +297,13 @@ async def fetch_and_insert_police_events() -> int:
 
             title = (event.get("name") or "")[:80]
             summary = (event.get("summary") or "").strip()
-            content = summary[:280] if summary else title[:280]
+            url =  "polisen.se" + (event.get("url") or "").strip()
+            body = summary if summary else title
+            if url:
+                source_line = f"\nKälla: Polismyndigheten\n{url}"
+                content = body[:600 - len(source_line)] + source_line
+            else:
+                content = body[:600]
             if not content:
                 continue
 
