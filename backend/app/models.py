@@ -119,3 +119,43 @@ class CommentVote(SQLModel, table=True):
     comment_id: uuid.UUID = Field(foreign_key="comment.id", primary_key=True)
     ip: str = Field(primary_key=True, max_length=45)
     direction: str = Field(max_length=4)  # "up" | "down"
+
+class UserRole(str, Enum):
+    user = "user"
+    moderator = "moderator"
+    admin = "admin"
+
+
+class User(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    username: str = Field(unique=True, max_length=50, index=True)
+    email: str = Field(unique=True, max_length=255, index=True)
+    hashed_password: str = Field(max_length=255)
+    role: UserRole = Field(default=UserRole.user, sa_column_kwargs={"server_default": "user"})
+    is_active: bool = Field(default=True)
+    avatar_url: str | None = Field(default=None, max_length=500)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class UserCreate(SQLModel):
+    username: str = Field(min_length=3, max_length=50)
+    email: str = Field(max_length=255)
+    password: str = Field(min_length=8, max_length=100)
+
+
+class UserOut(SQLModel):
+    id: uuid.UUID
+    username: str
+    email: str
+    role: UserRole
+    is_active: bool
+    avatar_url: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class LoginRequest(SQLModel):
+    identifier: str  # e-post eller användarnamn
+    password: str
+

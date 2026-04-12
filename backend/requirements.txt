@@ -5,3 +5,4 @@ asyncpg
 pydantic-settings
 alembic
 httpx
+argon2-cffi

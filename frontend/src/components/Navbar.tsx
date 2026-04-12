@@ -2,16 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { data: session } = useSession();
 
-  // Centraliserad lista för att enkelt lägga till/ta bort sidor
-  const links = [
+  const staticLinks = [
     { href: "/", label: "Karta" },
     { href: "/about", label: "Om oss" },
-    { href: "/loggain", label: "Logga in" },
-    { href: "/registrera", label: "Registrera", isButton: true },
   ];
 
   return (
@@ -24,19 +23,26 @@ export default function Navbar() {
 
         {/* Desktop Menu */}
         <div className="hidden sm:flex items-center gap-4 text-sm text-blue-700">
-          {links.map((l) => (
+          {staticLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className={
-                l.isButton
-                  ? "bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors font-medium"
-                  : "hover:text-blue-900 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors"
-              }
+              className="hover:text-blue-900 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors"
             >
               {l.label}
             </Link>
           ))}
+          {session ? (
+            <>
+              <span className="text-blue-500 text-xs truncate max-w-[140px]">{session.user?.name ?? session.user?.email}</span>
+              <button onClick={() => signOut({callbackUrl: "/"})} className="hover:text-blue-900 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors">Logga ut</button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="hover:text-blue-900 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors">Logga in</Link>
+              <Link href="/register" className="bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors font-medium">Registrera</Link>
+            </>
+          )}
         </div>
 
         {/* Hamburger Button */}
@@ -74,20 +80,42 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {open && (
         <div className="sm:hidden border-t border-blue-200 px-4 py-3 flex flex-col gap-2 text-sm text-blue-700 bg-blue-50">
-          {links.map((l) => (
+          {staticLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className={
-                l.isButton
-                  ? "bg-blue-600 text-white px-3 py-2.5 rounded-md text-center font-medium mt-1"
-                  : "hover:text-blue-900 hover:bg-blue-100 px-2 py-2 rounded-md transition-colors"
-              }
+              className="hover:text-blue-900 hover:bg-blue-100 px-2 py-2 rounded-md transition-colors"
               onClick={() => setOpen(false)}
             >
               {l.label}
             </Link>
           ))}
+          {session ? (
+            <>
+              <span className="text-blue-500 text-xs px-2 truncate">
+                {session.user?.name ?? session.user?.email}
+              </span>
+              <button
+                onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }) }}
+                className="hover:text-blue-900 hover:bg-blue-100 px-2 py-2 rounded-md transition-colors text-left"
+              >
+                Logga ut
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="hover:text-blue-900 hover:bg-blue-100 px-2 py-2 rounded-md transition-colors" onClick={() => setOpen(false)}>
+                Logga in
+              </Link>
+              <Link
+                href="/registrera"
+                className="bg-blue-600 text-white px-3 py-2.5 rounded-md text-center font-medium mt-1"
+                onClick={() => setOpen(false)}
+              >
+                Registrera
+              </Link>
+            </>
+          )}
         </div>
       )}
     </nav>

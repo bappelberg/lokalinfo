@@ -14,7 +14,7 @@ from models import Comment, Post
 from gdelt_master import gdelt_sync_loop
 from police import police_sync_loop
 from svt_nyheter_fetcher import svt_sync_loop
-from routers import admin, comments, posts
+from routers import admin, auth, comments, posts
 
 SEED = [
     # (title, content, category, lat, lng, age, upvotes, downvotes)
@@ -414,3 +414,4 @@ app.add_middleware(
 app.include_router(posts.router)
 app.include_router(admin.router)
 app.include_router(comments.router)
+app.include_router(auth.router)

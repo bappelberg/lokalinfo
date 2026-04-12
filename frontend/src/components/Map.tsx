@@ -1186,7 +1186,14 @@ export default function Map() {
                   </span>
                   <span className="text-gray-400 text-xs">{formatTime(post.created_at)}</span>
                 </div>
-                <p className="font-semibold text-gray-900 mb-1">{post.title}</p>
+                <p
+                  className="font-semibold text-gray-900 mb-1 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => {
+                    setSelectedPost(post);
+                    setCommentSort("popular");
+                    fetchComments(post.id, "popular");
+                  }}
+                >{post.title}</p>
                 <p className="text-gray-700 my-2 whitespace-pre-wrap">{post.content}</p>
                 {post.image_url && (
                   <img
