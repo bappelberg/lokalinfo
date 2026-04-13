@@ -184,6 +184,20 @@ function FlyTo({
     return null;
 }
 
+function CenterOnUser({ userPos, triggerRef }: { userPos: [number, number] | null; triggerRef: React.MutableRefObject<(() => void) | null> }) {
+  const map = useMap();
+  useEffect(() => {
+    triggerRef.current = () => {
+      if (userPos) {
+        map.setView(userPos, 13, { animate: true });
+      } else {
+        map.locate({ setView: true, maxZoom: 13 });
+      }
+    };
+  }, [map, userPos, triggerRef]);
+  return null;
+}
+
 function Avatar({ url, username, size = 6 }: { url: string | null; username: string | null; size?: number }) {
   if (!username) return null;
   const px = size * 4;
@@ -308,6 +322,7 @@ export default function Map() {
   const centerRef = useRef<{ lat: number; lng: number } | null>(null);
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
   const mapRef = useRef<L.Map | null>(null);
+  const locateTriggerRef = useRef<(() => void) | null>(null);
   const pendingPostId = useRef<string | null>(
     typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("post") : null
   );
@@ -980,6 +995,18 @@ export default function Map() {
         </div>
       )}
 
+      {/* ── Centrera på min position ── */}
+      <button
+        onClick={() => locateTriggerRef.current?.()}
+        className={`absolute right-4 z-[1000] bg-white rounded-xl w-10 h-10 flex items-center justify-center shadow-md hover:bg-gray-50 active:scale-95 transition-all ${isLive ? "top-[4.5rem]" : "top-4"}`}
+        title="Centrera på min position"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-gray-600">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </svg>
+      </button>
+
       {/* ── Guide-text i add-mode ── */}
       {addMode && !newPin && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-md text-sm text-gray-700">
@@ -1234,6 +1261,7 @@ export default function Map() {
           }}
           onDone={() => setTarget(null)} // 👈 funkar nu
         />
+        <CenterOnUser userPos={userPos} triggerRef={locateTriggerRef} />
         {addMode && isLive && (
           <MapClickHandler onClick={(lat, lng) => setNewPin({ lat, lng })} />
         )}
