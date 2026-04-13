@@ -57,8 +57,10 @@ function makeIcon(category: string, upvotes = 0, downvotes = 0, pulse = false) {
 
   const size = pulse ? 18 : Math.max(6, Math.round(baseSize + sizeAdjustment));
   
+  const pulseRing = `<div class="animate-ping" style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.45"></div>`;
+
   return L.divIcon({
-    html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>`,
+    html: `<div style="position:relative;width:${size}px;height:${size}px">${pulseRing}<div style="position:relative;background:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div></div>`,
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -650,8 +652,9 @@ export default function Map() {
       adjustment = -Math.min(Math.log1p(Math.abs(netScore)) * 3, 8);
     }
     const size = pulse ? 18 : Math.max(6, Math.round(base + adjustment));
+    const pulseRing = `<div class="animate-ping" style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.45"></div>`;
     return L.divIcon({
-      html: `<div style="background:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div>`,
+      html: `<div style="position:relative;width:${size}px;height:${size}px">${pulseRing}<div style="position:relative;background:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5)"></div></div>`,
       className: "",
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
