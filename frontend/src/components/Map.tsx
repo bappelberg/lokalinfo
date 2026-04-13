@@ -171,7 +171,7 @@ function FlyTo({
           [target.bbox[1], target.bbox[3]],
         ]);
       } else {
-        map.setView([target.lat, target.lon], 16);
+        map.setView([target.lat, target.lon], 8);
       }
 
       onArrived(target.lat, target.lon);
