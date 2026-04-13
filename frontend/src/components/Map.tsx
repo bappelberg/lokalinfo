@@ -311,14 +311,26 @@ export default function Map() {
   );
   const [copied, setCopied] = useState<string | null>(null);
 
-  function sharePost(postId: string) {
+  function sharePost(postId: string, title?: string) {
     const url = `${window.location.origin}${window.location.pathname}?post=${postId}`;
     const finish = () => { setCopied(postId); setTimeout(() => setCopied(null), 2000); };
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(url).then(finish).catch(() => fallbackCopy(url, finish));
+
+    if (navigator.share) {
+      navigator.share({ title: title ?? "LokalInfo", url }).catch((err: unknown) => {
+        const name = err instanceof Error ? err.name : String(err);
+        const msg = err instanceof Error ? err.message : "";
+        alert(`Share error – ${name}: ${msg}`);
+        if (name !== "AbortError") {
+          fallbackCopy(url, finish);
+        }
+      });
     } else {
-      // navigator.clipboard requires HTTPS -> Fallback
-      fallbackCopy(url, finish);
+      alert(`navigator.share saknas. UA: ${navigator.userAgent}`);
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(url).then(finish).catch(() => fallbackCopy(url, finish));
+      } else {
+        fallbackCopy(url, finish);
+      }
     }
   }
 
@@ -712,7 +724,7 @@ export default function Map() {
                 ▼ {selectedPost.downvote_count}
               </button>
               <button
-                onClick={() => sharePost(selectedPost.id)}
+                onClick={() => sharePost(selectedPost.id, selectedPost.title)}
                 className="ml-auto text-xs text-gray-400 hover:text-blue-500 transition-colors"
               >
                 {copied === selectedPost.id ? "✓ Kopierat" : "Dela"}
@@ -1293,7 +1305,7 @@ export default function Map() {
                     💬 {post.comment_count}
                   </span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); sharePost(post.id); }}
+                    onClick={(e) => { e.stopPropagation(); sharePost(post.id, post.title); }}
                     className="ml-auto text-[11px] text-gray-400 hover:text-blue-500 transition-colors"
                   >
                     {copied === post.id ? "✓ Kopierat" : "Dela"}

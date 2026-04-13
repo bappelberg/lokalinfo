@@ -12,6 +12,7 @@ from config import settings
 from database import AsyncSessionLocal, engine
 from models import Comment, Post
 from gdelt_master import gdelt_sync_loop
+from krisinformation_fetcher import kris_sync_loop
 from police import police_sync_loop
 from svt_nyheter_fetcher import svt_sync_loop
 from routers import admin, auth, comments, posts
@@ -398,9 +399,10 @@ async def lifespan(app: FastAPI):
     # Starta bakgrundssynkar
     police_task = asyncio.create_task(police_sync_loop())
     gdelt_task = asyncio.create_task(gdelt_sync_loop())
-    svt_task = asyncio.create_task(svt_sync_loop());
+    svt_task = asyncio.create_task(svt_sync_loop())
+    kris_task = asyncio.create_task(kris_sync_loop())
     yield
-    for task in (police_task, gdelt_task, svt_task):
+    for task in (police_task, gdelt_task, svt_task, kris_task):
         task.cancel()
         try:
             await task
