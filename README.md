@@ -88,9 +88,6 @@ AUTH_SECRET=<generera med: openssl rand -base64 32>
 AUTH_URL=http://localhost:3000
 IMGBB_API_KEY=<din-imgbb-api-nyckel>
 
-# Externa API:er (valfritt — appen fungerar utan dessa)
-TRAFIKVERKET_API_KEY=
-JWT_SECRET=<generera med: openssl rand -base64 32>
 ```
 
 > **IMGBB API-nyckel** — gratis på [imgbb.com](https://imgbb.com/) och krävs för bilduppladdning.

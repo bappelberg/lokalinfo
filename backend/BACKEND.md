@@ -6,6 +6,7 @@
 - **SQLModel** (SQLAlchemy 2.0 + Pydantic v2)
 - **asyncpg** — async PostgreSQL-driver
 - **Alembic** — databasmigreringar
+- **argon2-cffi** — lösenordshashning
 - **Docker + PostgreSQL**
 
 ---
@@ -14,19 +15,24 @@
 
 ```
 backend/
-├── .env
 ├── requirements.txt
-├── config.py
-├── database.py
-├── Dockerfile
+├── Dockerfile / Dockerfile.prod
 └── app/
-    ├── main.py
-    ├── models.py
-    ├── rate_limit.py
+    ├── main.py                    # FastAPI-app, startup, seed-data
+    ├── models.py                  # Databas-modeller (SQLModel)
+    ├── config.py                  # Miljövariabler (pydantic-settings)
+    ├── database.py                # Async engine + session factory
+    ├── rate_limit.py              # In-memory rate limiting per IP
+    ├── utils.py                   # Hjälpfunktioner
+    ├── police.py                  # Synkar Polisens händelse-API
+    ├── svt_nyheter_fetcher.py     # Synkar SVT Nyheter RSS
+    ├── krisinformation_fetcher.py # Synkar Krisinformation API
+    ├── gdelt_master.py            # Synkar GDELT globala nyheter
     └── routers/
-        ├── __init__.py
-        ├── posts.py
-        └── admin.py
+        ├── posts.py               # Inlägg (CRUD, röstning, rapportering)
+        ├── comments.py            # Kommentarer + trådar
+        ├── auth.py                # Registrering + inloggning
+        └── admin.py               # Adminpanel (moderering)
 ```
 
 ---
@@ -34,165 +40,121 @@ backend/
 ## Miljövariabler (.env)
 
 ```
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/lokalinfo
+DATABASE_URL=postgresql+asyncpg://user:password@db:5432/lokalinfo
 ADMIN_TOKEN=change-this-to-a-secret-token
 CORS_ORIGINS=http://localhost:3000
-```
-
-Inuti Docker Compose sätts `DATABASE_URL` automatiskt via `docker-compose.yml`.
-
----
-
-## requirements.txt
-
-```
-fastapi[standard]
-sqlmodel
-uvicorn[standard]
-asyncpg
-pydantic-settings
-alembic
+DEBUG=true
 ```
 
 ---
 
-## config.py
-
-Läser miljövariabler med `pydantic-settings`.
-
-```python
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-class Settings(BaseSettings):
-    database_url: str
-    admin_token: str
-    cors_origins: str = "http://localhost:3000"
-
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
-
-    @property
-    def cors_origins_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",")]
-
-settings = Settings()
-```
-
----
-
-## database.py
-
-Skapar async engine och session factory med SQLModel.
-
-```python
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlmodel.ext.asyncio.session import AsyncSession
-from config import settings
-
-engine = create_async_engine(settings.database_url)
-AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-async def get_session():
-    async with AsyncSessionLocal() as session:
-        yield session
-```
-
----
-
-## app/models.py
-
-Kombinerar databasmodell och API-scheman med SQLModel.
+## Modeller
 
 ### Category (enum)
 
-| Konstantnamn | Värde i databasen |
+| Värde | Beskrivning |
 |---|---|
-| `ACCIDENT` | `olycka` |
-| `CRIME` | `brott` |
-| `TRAFFIC` | `trafik` |
-| `OUTAGE` | `driftstorning` |
-| `NATURE` | `natur` |
-| `ENVIRONMENT` | `miljo` |
-| `EVENT` | `event` |
-| `OTHER` | `ovrigt` |
+| `brott` | Brott & polishändelser |
+| `trafik` | Trafikolyckor & störningar |
+| `brand` | Brand & räddningsinsatser |
+| `event` | Evenemang |
+| `storning` | Driftstörningar & störningar |
+| `natur` | Naturhändelser |
+| `ovrigt` | Övrigt |
 
 ### Post (tabell)
 
 | Fält | Typ | Standard |
 |---|---|---|
 | `id` | UUID | auto (uuid4) |
-| `content` | str (max 280) | — |
+| `title` | str (max 80) | "" |
+| `content` | str (max 600) | — |
 | `category` | str (max 20) | — |
-| `lat` | float | — |
-| `lng` | float | — |
+| `lat` / `lng` | float | — |
 | `created_at` | datetime (UTC) | auto |
+| `upvote_count` / `downvote_count` | int | 0 |
+| `comment_count` | int | 0 |
 | `report_count` | int | 0 |
-| `is_hidden` | bool | False |
-| `is_deleted` | bool | False |
+| `is_hidden` / `is_deleted` | bool | False |
+| `source` | str? (max 20) | None |
+| `external_id` | str? (max 50) | None |
+| `image_url` | str? (max 500) | None |
+| `user_id` | UUID? | None |
+| `author_username` | str? (max 50) | None |
+| `author_avatar_url` | str? (max 500) | None |
 
-`AUTO_HIDE_THRESHOLD = 5` — inlägg döljs automatiskt när `report_count` når detta värde.
-
-### Scheman
-
-| Klass | Används för |
-|---|---|
-| `PostCreate` | Input vid POST /posts (validerar category som enum, koordinater inom giltiga intervall) |
-| `PostOut` | Svar till vanlig klient (döljer `is_deleted`) |
-| `PostAdminOut` | Svar till admin (inkluderar `is_deleted`) |
-| `ReportOut` | Svar vid rapportering (`message`, `auto_hidden`) |
+`AUTO_HIDE_THRESHOLD = 1` — inlägg döljs automatiskt när `report_count` når detta värde.
 
 ---
 
-## app/rate_limit.py
+## Endpoints
 
-In-memory rate limiting per IP-adress. Lagras aldrig i databasen.
+### Inlägg
+
+| Metod | URL | Beskrivning |
+|---|---|---|
+| `GET` | `/posts` | Hämta synliga inlägg (lat, lng, radius, category, from_date, to_date) |
+| `POST` | `/posts` | Skapa nytt inlägg |
+| `POST` | `/posts/{id}/vote` | Rösta (upvote/downvote) |
+| `POST` | `/posts/{id}/report` | Rapportera inlägg |
+
+### Kommentarer
+
+| Metod | URL | Beskrivning |
+|---|---|---|
+| `GET` | `/posts/{id}/comments` | Hämta kommentarer (med trådar) |
+| `POST` | `/posts/{id}/comments` | Skapa kommentar (stöder parent_id för svar) |
+| `POST` | `/comments/{id}/vote` | Rösta på kommentar |
+
+### Auth
+
+| Metod | URL | Beskrivning |
+|---|---|---|
+| `POST` | `/auth/register` | Registrera ny användare |
+| `POST` | `/auth/login` | Logga in (returnerar session) |
+| `GET` | `/users/me` | Hämta inloggad användare |
+
+### Admin (kräver header `X-Admin-Token`)
+
+| Metod | URL | Beskrivning |
+|---|---|---|
+| `GET` | `/admin/posts` | Lista rapporterade inlägg |
+| `DELETE` | `/admin/posts/{id}` | Mjukradera inlägg |
+| `POST` | `/admin/posts/{id}/restore` | Återställ inlägg |
+| `POST` | `/admin/posts/{id}/reply` | Svara på inlägg som admin |
+
+---
+
+## Externa datakällor
+
+Bakgrundslooparna startar automatiskt vid uppstart och körs parallellt:
+
+| Källa | Fil | Intervall |
+|---|---|---|
+| Polismyndigheten | `police.py` | 15 min |
+| SVT Nyheter (RSS) | `svt_nyheter_fetcher.py` | 20 min |
+| Krisinformation | `krisinformation_fetcher.py` | 30 min |
+| GDELT | `gdelt_master.py` | 60 min |
+
+---
+
+## Rate limiting
+
+In-memory per IP-adress — lagras aldrig i databasen.
 
 - Max **5 inlägg per timme** per IP
 - **5 minuters cooldown** mellan inlägg
 
 ---
 
-## app/main.py
-
-- Skapar databastabeller vid uppstart via `SQLModel.metadata.create_all`
-- Registrerar CORS-middleware med origins från `settings.cors_origins_list`
-- Monterar routrarna `/posts` och `/admin`
-
----
-
-## Endpoints
-
-### Publika
-
-| Metod | URL | Beskrivning |
-|---|---|---|
-| `GET` | `/posts?lat=&lng=&radius=` | Hämta synliga inlägg inom radien (km, standard 5.0) |
-| `POST` | `/posts` | Skapa nytt inlägg |
-| `POST` | `/posts/{id}/report` | Rapportera inlägg |
-
-### Admin (kräver header `X-Admin-Token`)
-
-| Metod | URL | Beskrivning |
-|---|---|---|
-| `GET` | `/admin/posts` | Lista rapporterade inlägg, sorterade efter antal rapporter |
-| `DELETE` | `/admin/posts/{id}` | Mjukradera inlägg (`is_deleted = true`) |
-| `POST` | `/admin/posts/{id}/restore` | Återställ inlägg (`is_hidden = false`, `report_count = 0`) |
-
----
-
 ## Docker
 
-### Starta hela stacken
-
 ```bash
+# Dev (med hot reload)
+docker compose -f docker-compose.dev.yml up --build
+
+# Produktion
 docker compose up --build
 ```
-
-### Endast backend (om databasen redan körs)
-
-```bash
-docker compose up --build backend
-```
-
-Volymmount `./backend:/app` gör att kodändringar reflekteras direkt i dev-läge utan rebuild.
 
 API-dokumentation: [http://localhost:8000/docs](http://localhost:8000/docs)

@@ -6,3 +6,4 @@ pydantic-settings
 alembic
 httpx
 argon2-cffi
+newspaper3k
