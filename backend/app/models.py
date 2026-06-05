@@ -4,7 +4,7 @@ from enum import Enum
 
 from sqlmodel import Field, SQLModel
 
-AUTO_HIDE_THRESHOLD = 5
+AUTO_HIDE_THRESHOLD = 1
 
 
 class Category(str, Enum):

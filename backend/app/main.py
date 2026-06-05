@@ -10,7 +10,7 @@ from sqlmodel import SQLModel, select
 
 from config import settings
 from database import AsyncSessionLocal, engine
-from models import Comment, Post
+from models import Comment, Post, User, UserRole
 from gdelt_master import gdelt_sync_loop
 from krisinformation_fetcher import kris_sync_loop
 from police import police_sync_loop
@@ -339,6 +339,91 @@ async def lifespan(app: FastAPI):
         await conn.execute(text("ALTER TABLE post ADD COLUMN IF NOT EXISTS author_avatar_url VARCHAR(500)"))
         await conn.execute(text("ALTER TABLE comment ADD COLUMN IF NOT EXISTS author_username VARCHAR(50)"))
         await conn.execute(text("ALTER TABLE comment ADD COLUMN IF NOT EXISTS author_avatar_url VARCHAR(500)"))
+
+    # ── Admin-användare + rapporterade demo-inlägg (alltid) ───────────────────
+    async with AsyncSessionLocal() as session:
+        from argon2 import PasswordHasher as _PH
+        _ph = _PH()
+
+        admin_exists = await session.exec(select(User).where(User.username == "admin"))
+        if not admin_exists.first():
+            session.add(User(
+                username="admin",
+                email="admin@lokalinfo.se",
+                hashed_password=_ph.hash("admin1234"),
+                role=UserRole.admin,
+            ))
+            await session.commit()
+
+        reported_exists = await session.exec(select(Post).where(Post.report_count > 0))
+        if not reported_exists.first():
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+            spam = Post(
+                title="GRATIS iPhone 16 på Sergels torg idag!!",
+                content="Apple delar ut GRATIS iPhone 16 på Sergels torg kl 14:00 idag! Begränsat antal, kom tidigt!! Dela vidare!!",
+                category="ovrigt", lat=59.3328, lng=18.0645,
+                created_at=now - timedelta(hours=3),
+                upvote_count=0, downvote_count=31, report_count=40, is_hidden=True,
+                author_username="iphone_fan_123",
+            )
+            hate = Post(
+                title="Undvik Rinkeby",
+                content="Åkte igenom Rinkeby igår. Vad har de gjort med det området? Verkligen inte som det var förr. Förstår varför folk flyr.",
+                category="ovrigt", lat=59.3845, lng=17.9270,
+                created_at=now - timedelta(hours=5),
+                upvote_count=1, downvote_count=18, report_count=24, is_hidden=True,
+                author_username="anonym99",
+            )
+            disinfo = Post(
+                title="Stor olycka på E4 – vägen helt stängd",
+                content="Just nu: E4 vid Södertälje är helt blockerad efter en olycka med 12 fordon. Räkna med 4–5 timmars väntetid. TV4 sänder live.",
+                category="trafik", lat=59.1950, lng=17.6265,
+                created_at=now - timedelta(hours=1),
+                upvote_count=3, downvote_count=22, comment_count=5, report_count=16, is_hidden=True,
+                author_username="trafikwatcher",
+            )
+            legit = Post(
+                title="Halka på Drottninggatan – kommunen har inte saltat",
+                content="Varning: kraftig halka utanför Kulturhuset på Drottninggatan. Kommunen har inte saltat trots minusgrader. Gå försiktigt!",
+                category="trafik", lat=59.3338, lng=18.0636,
+                created_at=now - timedelta(hours=2),
+                upvote_count=12, downvote_count=1, comment_count=3, report_count=8, is_hidden=True,
+                author_username="lokalboen_erik",
+            )
+            for post in (spam, hate, disinfo, legit):
+                session.add(post)
+            await session.commit()
+            for post in (spam, hate, disinfo, legit):
+                await session.refresh(post)
+
+            # Kommentarer på desinformationsinlägget
+            for content, upvotes, downvotes, age in [
+                ("Körde förbi för 30 min sedan. Inget block alls? Vad pratar du om?", 14, 2, timedelta(minutes=50)),
+                ("Trafikverkets app visar inga störningar på E4 vid Södertälje just nu.", 11, 0, timedelta(minutes=45)),
+                ("Fake news, spred sig på Facebook igår. Inget av detta stämmer.", 9, 1, timedelta(minutes=35)),
+                ("Någon borde ta bort det här inlägget, folk kommer köra omvägar i onödan.", 7, 0, timedelta(minutes=20)),
+                ("Rapporterat! Desinformation som detta är farligt.", 6, 0, timedelta(minutes=10)),
+            ]:
+                session.add(Comment(
+                    post_id=disinfo.id, content=content,
+                    upvote_count=upvotes, downvote_count=downvotes,
+                    created_at=now - age,
+                ))
+
+            # Kommentarer på det legitimt rapporterade inlägget
+            for content, upvotes, downvotes, age in [
+                ("Håller med, halkade precis där! Det är livsfarligt.", 8, 0, timedelta(hours=1, minutes=45)),
+                ("Typ den tredje vintern i rad som de missar den sträckan.", 5, 1, timedelta(hours=1, minutes=20)),
+                ("Har rapporterat till Stockholm stad nu. Tack för varningen!", 3, 0, timedelta(minutes=55)),
+            ]:
+                session.add(Comment(
+                    post_id=legit.id, content=content,
+                    upvote_count=upvotes, downvote_count=downvotes,
+                    created_at=now - age,
+                ))
+
+            await session.commit()
 
     if settings.debug:
         async with AsyncSessionLocal() as session:

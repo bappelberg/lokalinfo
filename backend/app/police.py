@@ -297,14 +297,23 @@ async def fetch_and_insert_police_events() -> int:
 
             title = (event.get("name") or "")[:80]
             summary = (event.get("summary") or "").strip()
-            url =  "polisen.se" + (event.get("url") or "").strip()
-            body = summary if summary else title
-            if url:
-                source_line = f"\nKälla: Polismyndigheten\n{url}"
-                content = body[:600 - len(source_line)] + source_line
-            else:
-                content = body[:600]
-            if not content:
+            event_type = (event.get("type") or "").strip()
+            location_name = (event.get("location", {}).get("name") or "").strip()
+            url = "polisen.se" + (event.get("url") or "").strip()
+
+            parts: list[str] = []
+            if summary:
+                parts.append(summary)
+            if event_type:
+                parts.append(f"Typ: {event_type}")
+            if location_name:
+                parts.append(f"Plats: {location_name}")
+            if created_at:
+                parts.append(created_at.strftime("Tid: %d %b %Y %H:%M"))
+            body = "\n".join(parts) if parts else title
+            source_line = f"\nKälla: Polismyndigheten\n{url}"
+            content = body[:600 - len(source_line)] + source_line
+            if not content.strip():
                 continue
 
             fallback_gps = event.get("location", {}).get("gps", "")

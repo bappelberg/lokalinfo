@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
+  const isAdmin = (session as any)?.role === "admin";
 
   const staticLinks = [
     { href: "/", label: "Karta" },
@@ -34,6 +35,14 @@ export default function Navbar() {
           ))}
           {session ? (
             <>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded-md transition-colors text-red-600 font-medium"
+                >
+                  Admin
+                </Link>
+              )}
               <Link href="/settings" className="flex items-center gap-1.5 hover:text-blue-900 hover:bg-blue-100 px-2 py-1 rounded-md transition-colors">
                 {session.user?.image ? (
                   <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
@@ -101,6 +110,15 @@ export default function Navbar() {
           ))}
           {session ? (
             <>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="hover:text-red-700 hover:bg-red-50 px-2 py-2 rounded-md transition-colors text-red-600 font-medium"
+                >
+                  Admin
+                </Link>
+              )}
               <Link href="/settings" onClick={() => setOpen(false)} className="flex items-center gap-2 hover:text-blue-900 hover:bg-blue-100 px-2 py-2 rounded-md transition-colors">
                 {session.user?.image ? (
                   <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover" />
